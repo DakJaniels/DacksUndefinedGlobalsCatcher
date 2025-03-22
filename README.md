@@ -2,7 +2,7 @@
 
 A powerful debugging utility for ESO (Elder Scrolls Online) add-on developers that helps catch and report undefined global variables. This tool makes it easier to track down pesky UI errors like `attempt to index a nil value` and other issues related to undefined globals in ESO add-ons.
 
-> **Compatible with both PC and Console UI!** Works seamlessly whether you're using keyboard/mouse or gamepad mode.
+> **Compatible with both PC/Gamepad and Console UI(that is ForceConsoleFlow.2 CVar)!** Works seamlessly whether you're using keyboard/mouse or gamepad mode.
 
 ## Overview
 
