@@ -29,13 +29,13 @@ local WINDOW_MANAGER = _G.GetWindowManager()
 local ANIMATION_MANAGER = _G.GetAnimationManager()
 
 if not SLASH_COMMANDS["/rl"] then
-    SLASH_COMMANDS["/rl"] = function ()
+    SLASH_COMMANDS["/rl"] = function()
         ReloadUI("ingame")
     end
 end
 
 local font
-if (IsInGamepadPreferredMode() or IsConsoleUI()) then
+if IsInGamepadPreferredMode() or IsConsoleUI() then
     font = "$(GAMEPAD_MEDIUM_FONT)|$(GP_18)|soft-shadow-thick"
 else
     font = "$(BOLD_FONT)|$(KB_18)|soft-shadow-thin"
@@ -43,15 +43,21 @@ end
 
 -- Helper functions for showing/hiding the window
 local function ShowMsgWin(win)
-    if win then win:SetHidden(false) end
+    if win then
+        win:SetHidden(false)
+    end
 end
 
 local function HideMsgWin(win)
-    if win then win:SetHidden(true) end
+    if win then
+        win:SetHidden(true)
+    end
 end
 
 local function toggleWindow(win)
-    if win then win:Toggle() end
+    if win then
+        win:Toggle()
+    end
 end
 
 -- Our message window implementation using ZO_DeferredInitializingObject
@@ -154,7 +160,7 @@ function MessageWindow:CreateUI()
     self.bgSolid:SetAnchor(TOPLEFT, self.control, TOPLEFT, 10, 40)
     self.bgSolid:SetAnchor(BOTTOMRIGHT, self.control, BOTTOMRIGHT, -10, -10)
     self.bgSolid:SetCenterColor(0.05, 0.05, 0.05, 0.85) -- Completely black with no transparency
-    self.bgSolid:SetEdgeColor(0.1, 0.1, 0.2, 0.5)       -- Subtle edge
+    self.bgSolid:SetEdgeColor(0.1, 0.1, 0.2, 0.5) -- Subtle edge
 
     -- Create improved divider
     self.divider = WINDOW_MANAGER:CreateControl(self.name .. "Divider", self.control, CT_TEXTURE)
@@ -174,7 +180,7 @@ function MessageWindow:CreateUI()
     self.buffer:SetAnchor(TOPLEFT, self.control, TOPLEFT, 20, 45) -- Adjusted to be below divider
     self.buffer:SetAnchor(BOTTOMRIGHT, self.control, BOTTOMRIGHT, -35, -20)
     self.buffer:SetLineFade(0, 0)
-    self.buffer:SetHandler("OnLinkMouseUp", function (self, linkText, link, button)
+    self.buffer:SetHandler("OnLinkMouseUp", function(self, linkText, link, button)
         ZO_LinkHandler_OnLinkMouseUp(link, button, self)
     end)
     self.buffer:SetDimensionConstraints(200 - 55, 150 - 62, maxWidth, maxHeight)
@@ -244,7 +250,7 @@ function MessageWindow:CreateUI()
     end
 
     -- Set up resize behavior to ensure text buffer adjusts correctly when resized
-    self.control:SetHandler("OnResized", function ()
+    self.control:SetHandler("OnResized", function()
         self:AdjustSlider()
     end)
 end
@@ -267,7 +273,7 @@ function MessageWindow:SetupHandlers()
     local control = self.control
 
     -- Mouse wheel scrolling
-    buffer:SetHandler("OnMouseWheel", function (_, delta, ctrl, alt, shift)
+    buffer:SetHandler("OnMouseWheel", function(_, delta, ctrl, alt, shift)
         local offset = delta
         if shift then
             offset = offset * buffer:GetNumVisibleLines()
@@ -279,7 +285,7 @@ function MessageWindow:SetupHandlers()
     end)
 
     -- Slider value changed
-    slider:SetHandler("OnValueChanged", function (_, value, eventReason)
+    slider:SetHandler("OnValueChanged", function(_, value, eventReason)
         local numHistoryLines = buffer:GetNumHistoryLines()
         if eventReason == EVENT_REASON_HARDWARE then
             buffer:SetScrollPosition(numHistoryLines - value)
@@ -287,30 +293,32 @@ function MessageWindow:SetupHandlers()
     end)
 
     -- Scroll buttons
-    self.scrollUp:SetHandler("OnMouseDown", function ()
+    self.scrollUp:SetHandler("OnMouseDown", function()
         buffer:SetScrollPosition(buffer:GetScrollPosition() + 1)
         slider:SetValue(slider:GetValue() - 1)
     end)
 
-    self.scrollDown:SetHandler("OnMouseDown", function ()
+    self.scrollDown:SetHandler("OnMouseDown", function()
         buffer:SetScrollPosition(buffer:GetScrollPosition() - 1)
         slider:SetValue(slider:GetValue() + 1)
     end)
 
-    self.scrollEnd:SetHandler("OnMouseDown", function ()
+    self.scrollEnd:SetHandler("OnMouseDown", function()
         buffer:SetScrollPosition(0)
         slider:SetValue(buffer:GetNumHistoryLines())
     end)
 
     -- Close button
-    self.closeButton:SetHandler("OnClicked", function ()
+    self.closeButton:SetHandler("OnClicked", function()
         self:SetHidden(true)
     end)
 end
 
 -- Adjust the slider based on the current buffer state
 function MessageWindow:AdjustSlider()
-    if not self.buffer or not self.slider then return end
+    if not self.buffer or not self.slider then
+        return
+    end
 
     local numHistoryLines = self.buffer:GetNumHistoryLines()
     local numVisHistoryLines = self.buffer:GetNumVisibleLines()
@@ -338,7 +346,9 @@ end
 -- Add text to the buffer
 function MessageWindow:AddText(message, red, green, blue)
     -- Don't process nil messages
-    if not message then return end
+    if not message then
+        return
+    end
 
     -- Queue messages if we're not initialized yet
     if not self.buffer then
@@ -430,7 +440,7 @@ local function prettyPrint(value, indent, done)
     for k in pairs(value) do
         table_insert(keys, k)
     end
-    table_sort(keys, function (a, b)
+    table_sort(keys, function(a, b)
         return tostring(a) < tostring(b)
     end)
 
@@ -475,7 +485,7 @@ local function formatMessage(formatStr, reportedKey, key, traceback, functionNam
     local header = string_format("|cFFD700%s|r", string_format(formatStr, reportedKey, key))
 
     -- Format the call stack with improved colors and indentation
-    local callStackInfo = { "|c5C88DACall stack:|r" }
+    local callStackInfo = { "|c5C88DA" .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_TRACEBACK_HEADER) .. "|r" }
     for i, functionName in ipairs(functionNames) do
         -- Use different colors for different types of functions
         local color = "|cCCCCCC" -- Default gray
@@ -509,18 +519,21 @@ local function formatMessage(formatStr, reportedKey, key, traceback, functionNam
         locals = locals:gsub("=%s*{%s*}", "= {}") -- Handle empty tables
 
         -- Clean up the locals string to make it valid Lua
-        locals = locals:gsub("=%s*{([^}]+)}", function (content)
+        locals = locals:gsub("=%s*{([^}]+)}", function(content)
             -- Format table contents properly
-            local cleaned = content:gsub("%s+", " ")        -- Normalize whitespace
+            local cleaned = content
+                :gsub("%s+", " ") -- Normalize whitespace
                 :gsub("([%w_]+)%s*=%s*([^,}]+)", "%1 = %2") -- Fix key-value pairs
-                :gsub(",%s*}", "}")                         -- Remove trailing commas
+                :gsub(",%s*}", "}") -- Remove trailing commas
             return "= {" .. cleaned .. "}"
         end)
 
         -- Add quotes around string keys if needed
-        locals = locals:gsub("([%w_]+)%s*=", function (keyName)
+        locals = locals:gsub("([%w_]+)%s*=", function(keyName)
             -- Don't quote 'self' as it's a special case
-            if keyName == "self" then return keyName .. " =" end
+            if keyName == "self" then
+                return keyName .. " ="
+            end
             return string_format("%q = ", keyName)
         end)
 
@@ -528,14 +541,14 @@ local function formatMessage(formatStr, reportedKey, key, traceback, functionNam
         if localsFunc then
             local success, result = pcall(localsFunc)
             if success and type(result) == "table" then
-                locals = "\n|cE6CC80Locals:|r\n" .. prettyPrint(result, 1) .. "\n"
+                locals = "\n|cE6CC80" .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_TRACEBACK_LOCALS) .. "|r\n" .. prettyPrint(result, 1) .. "\n"
                 traceback = traceback:gsub("<[Ll]ocals>.+</[Ll]ocals>", locals)
             end
         end
     end
 
     -- Format traceback for better readability
-    traceback = traceback:gsub("stack traceback:", "|cFF6666Traceback:|r")
+    traceback = traceback:gsub("stack traceback:", "|cFF6666" .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_TRACEBACK_TRACE) .. "|r")
 
     -- Colorize file paths in traceback
     traceback = traceback:gsub("([%w_/\\%.]+%.lua:%d+:)", "|cAAFFAA%1|r")
@@ -552,24 +565,25 @@ local function formatMessage(formatStr, reportedKey, key, traceback, functionNam
     return (message:gsub("\r\n", "\n")) -- Normalize any Windows line endings, capture only first return value
 end
 
-
 -- Configuration
-local CONFIG =
-{
+local CONFIG = {
     WINDOW_WIDTH = 1000,
     WINDOW_HEIGHT = 600,
     EPSILON = 1e-6,
-    MAX_REPORTS = 1000 -- Add a limit to prevent memory leaks
+    MAX_REPORTS = 1000, -- Add a limit to prevent memory leaks
 }
 
 -- State management
-local reported = setmetatable({}, { __index = function () return 0 end })
+local reported = setmetatable({}, {
+    __index = function()
+        return 0
+    end,
+})
 local msgwin = nil
 --- @cast msgwin MessageWindow
 
 -- Default ignore globals that are static - these won't be saved but always included
-local defaultIgnoreGlobals =
-{
+local defaultIgnoreGlobals = {
     "ADCUI",
     "ActionButton1Decoration",
     "ActionButton2Decoration",
@@ -746,15 +760,13 @@ local defaultIgnoreGlobals =
 }
 
 -- SavedVariables - will be populated on addon load
-local SavedVars =
-{
-    userIgnoreGlobals = {},  -- User-defined ignore list
-    userIgnoreFunctions = {} -- User-defined function patterns to ignore
+local SavedVars = {
+    userIgnoreGlobals = {}, -- User-defined ignore list
+    userIgnoreFunctions = {}, -- User-defined function patterns to ignore
 }
 
 -- Default function patterns that are static - these won't be saved but always included
-local defaultIgnoreFunctions =
-{
+local defaultIgnoreFunctions = {
     "CreateControl",
     "GetNamedChild",
     "CreateControlFromVirtual",
@@ -805,7 +817,7 @@ local function rebuildIgnoreLookup()
         if SavedVars and SavedVars.userIgnoreGlobals then
             userCount = #SavedVars.userIgnoreGlobals
         end
-        msgwin:AddText("Updated ignore list: " .. #defaultIgnoreGlobals .. " default entries + " .. userCount .. " user entries", 0, 1, 0)
+        msgwin:AddText(string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_UPDATE_IGNORE_LIST), #defaultIgnoreGlobals, userCount), 0, 1, 0)
     end
 end
 
@@ -831,20 +843,20 @@ local function rebuildIgnoreFunctionLookup()
         if SavedVars and SavedVars.userIgnoreFunctions then
             userCount = #SavedVars.userIgnoreFunctions
         end
-        msgwin:AddText("Updated function ignore list: " .. #defaultIgnoreFunctions .. " default entries + " .. userCount .. " user entries", 0, 1, 0)
+        msgwin:AddText(string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_UPDATE_FUNC_LIST), #defaultIgnoreFunctions, userCount), 0, 1, 0)
     end
 end
 
 -- Add a global to the ignore list
 local function addGlobalToIgnoreList(globalName)
     if not globalName or globalName == "" then
-        return false, "Global name cannot be empty"
+        return false, GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_NAME)
     end
 
     -- Check if it's already in the default list
     for _, name in ipairs(defaultIgnoreGlobals) do
         if name == globalName then
-            return false, "'" .. globalName .. "' is already in the default ignore list"
+            return false, string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_ALREADY_DEFAULT), globalName)
         end
     end
 
@@ -852,7 +864,7 @@ local function addGlobalToIgnoreList(globalName)
     if SavedVars and SavedVars.userIgnoreGlobals then
         for _, name in ipairs(SavedVars.userIgnoreGlobals) do
             if name == globalName then
-                return false, "'" .. globalName .. "' is already in your ignore list"
+                return false, string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_ALREADY_USER), globalName)
             end
         end
     end
@@ -863,19 +875,19 @@ local function addGlobalToIgnoreList(globalName)
         rebuildIgnoreLookup()
     end
 
-    return true, "Added '" .. globalName .. "' to your ignore list"
+    return true, string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_ADDED), globalName)
 end
 
 -- Remove a global from the ignore list
 local function removeGlobalFromIgnoreList(globalName)
     if not globalName or globalName == "" then
-        return false, "Global name cannot be empty"
+        return false, GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_NAME)
     end
 
     -- Check if it's in the default list
     for _, name in ipairs(defaultIgnoreGlobals) do
         if name == globalName then
-            return false, "'" .. globalName .. "' is in the default ignore list and cannot be removed"
+            return false, string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_CANNOT_REMOVE_DEFAULT), globalName)
         end
     end
 
@@ -892,31 +904,31 @@ local function removeGlobalFromIgnoreList(globalName)
     end
 
     if not found then
-        return false, "'" .. globalName .. "' was not found in your ignore list"
+        return false, string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_NOT_FOUND), globalName)
     end
 
     rebuildIgnoreLookup()
 
-    return true, "Removed '" .. globalName .. "' from your ignore list"
+    return true, string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_REMOVED), globalName)
 end
 
 -- List ignored globals
 local function listIgnoredGlobals()
     if msgwin then
         msgwin:SetHidden(false)
-        msgwin:AddText("===== DEFAULT IGNORED GLOBALS =====", 1, 0.8, 0)
-        msgwin:AddText("These cannot be removed:", 1, 0.8, 0)
+        msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_DEFAULT_GLOBALS), 1, 0.8, 0)
+        msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_DEFAULT_GLOBALS_DESC), 1, 0.8, 0)
 
         table_sort(defaultIgnoreGlobals)
         for _, name in ipairs(defaultIgnoreGlobals) do
             msgwin:AddText(name, 0.7, 0.7, 0.7)
         end
 
-        msgwin:AddText("===== USER IGNORED GLOBALS =====", 0, 0.8, 1)
-        msgwin:AddText("Manage these with /undefs_add and /undefs_remove", 0, 0.8, 1)
+        msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_USER_GLOBALS), 0, 0.8, 1)
+        msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_USER_GLOBALS_DESC), 0, 0.8, 1)
 
         if not SavedVars or not SavedVars.userIgnoreGlobals or #SavedVars.userIgnoreGlobals == 0 then
-            msgwin:AddText("No user-defined ignored globals", 0.7, 0.7, 0.7)
+            msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_NO_USER_GLOBALS), 0.7, 0.7, 0.7)
         else
             table_sort(SavedVars.userIgnoreGlobals)
             for _, name in ipairs(SavedVars.userIgnoreGlobals) do
@@ -930,19 +942,19 @@ end
 local function listIgnoredFunctions()
     if msgwin then
         msgwin:SetHidden(false)
-        msgwin:AddText("===== DEFAULT IGNORED FUNCTION PATTERNS =====", 1, 0.8, 0)
-        msgwin:AddText("These cannot be removed:", 1, 0.8, 0)
+        msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_DEFAULT_FUNCS), 1, 0.8, 0)
+        msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_DEFAULT_FUNCS_DESC), 1, 0.8, 0)
 
         table_sort(defaultIgnoreFunctions)
         for _, pattern in ipairs(defaultIgnoreFunctions) do
             msgwin:AddText(pattern, 0.7, 0.7, 0.7)
         end
 
-        msgwin:AddText("===== USER IGNORED FUNCTION PATTERNS =====", 0, 0.8, 1)
-        msgwin:AddText("Manage these with /undefs_addfunc and /undefs_removefunc", 0, 0.8, 1)
+        msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_USER_FUNCS), 0, 0.8, 1)
+        msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_USER_FUNCS_DESC), 0, 0.8, 1)
 
         if not SavedVars or not SavedVars.userIgnoreFunctions or #SavedVars.userIgnoreFunctions == 0 then
-            msgwin:AddText("No user-defined ignored function patterns", 0.7, 0.7, 0.7)
+            msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_NO_USER_FUNCS), 0.7, 0.7, 0.7)
         else
             table_sort(SavedVars.userIgnoreFunctions)
             for _, pattern in ipairs(SavedVars.userIgnoreFunctions) do
@@ -955,13 +967,13 @@ end
 -- Add a function pattern to the ignore list
 local function addFunctionToIgnoreList(functionPattern)
     if not functionPattern or functionPattern == "" then
-        return false, "Function pattern cannot be empty"
+        return false, GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_PATTERN)
     end
 
     -- Check if it's already in the default list
     for _, pattern in ipairs(defaultIgnoreFunctions) do
         if pattern == functionPattern then
-            return false, "'" .. functionPattern .. "' is already in the default function ignore list"
+            return false, string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_PATTERN_ALREADY_DEFAULT), functionPattern)
         end
     end
 
@@ -969,7 +981,7 @@ local function addFunctionToIgnoreList(functionPattern)
     if SavedVars and SavedVars.userIgnoreFunctions then
         for _, pattern in ipairs(SavedVars.userIgnoreFunctions) do
             if pattern == functionPattern then
-                return false, "'" .. functionPattern .. "' is already in your function ignore list"
+                return false, string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_PATTERN_ALREADY_USER), functionPattern)
             end
         end
     end
@@ -980,19 +992,19 @@ local function addFunctionToIgnoreList(functionPattern)
         rebuildIgnoreFunctionLookup()
     end
 
-    return true, "Added '" .. functionPattern .. "' to your function ignore list"
+    return true, string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_PATTERN_ADDED), functionPattern)
 end
 
 -- Remove a function pattern from the ignore list
 local function removeFunctionFromIgnoreList(functionPattern)
     if not functionPattern or functionPattern == "" then
-        return false, "Function pattern cannot be empty"
+        return false, GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_PATTERN)
     end
 
     -- Check if it's in the default list
     for _, pattern in ipairs(defaultIgnoreFunctions) do
         if pattern == functionPattern then
-            return false, "'" .. functionPattern .. "' is in the default function ignore list and cannot be removed"
+            return false, string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_PATTERN_CANNOT_REMOVE_DEFAULT), functionPattern)
         end
     end
 
@@ -1009,27 +1021,27 @@ local function removeFunctionFromIgnoreList(functionPattern)
     end
 
     if not found then
-        return false, "'" .. functionPattern .. "' was not found in your function ignore list"
+        return false, string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_PATTERN_NOT_FOUND), functionPattern)
     end
 
     rebuildIgnoreFunctionLookup()
 
-    return true, "Removed '" .. functionPattern .. "' from your function ignore list"
+    return true, string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_PATTERN_REMOVED), functionPattern)
 end
 
 -- Show help message
 local function showHelp()
     if msgwin then
         msgwin:SetHidden(false)
-        msgwin:AddText("===== UNDEFINED GLOBALS CATCHER COMMANDS =====", 1, 1, 0)
-        msgwin:AddText("/undefs - Toggle the undefined globals window", 1, 1, 1)
-        msgwin:AddText("/undefs_list - List all ignored globals", 1, 1, 1)
-        msgwin:AddText("/undefs_add <name> - Add a global to the ignore list", 1, 1, 1)
-        msgwin:AddText("/undefs_remove <name> - Remove a global from the ignore list", 1, 1, 1)
-        msgwin:AddText("/undefs_listfunc - List all ignored function patterns", 1, 1, 1)
-        msgwin:AddText("/undefs_addfunc <pattern> - Add a function pattern to the ignore list", 1, 1, 1)
-        msgwin:AddText("/undefs_removefunc <pattern> - Remove a function pattern from the ignore list", 1, 1, 1)
-        msgwin:AddText("/undefs_help - Show this help message", 1, 1, 1)
+        msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_HELP_HEADER), 1, 1, 0)
+        msgwin:AddText("/undefs - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_TOGGLE), 1, 1, 1)
+        msgwin:AddText("/undefs_list - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_LIST), 1, 1, 1)
+        msgwin:AddText("/undefs_add <name> - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_ADD), 1, 1, 1)
+        msgwin:AddText("/undefs_remove <name> - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_REMOVE), 1, 1, 1)
+        msgwin:AddText("/undefs_listfunc - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_LISTFUNC), 1, 1, 1)
+        msgwin:AddText("/undefs_addfunc <pattern> - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_ADDFUNC), 1, 1, 1)
+        msgwin:AddText("/undefs_removefunc <pattern> - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_REMOVEFUNC), 1, 1, 1)
+        msgwin:AddText("/undefs_help - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_HELP), 1, 1, 1)
     end
 end
 
@@ -1055,7 +1067,9 @@ local function isControlCreation(functionNames)
 end
 
 local function shouldIgnoreGlobal(key)
-    if type(key) ~= "string" then return false end
+    if type(key) ~= "string" then
+        return false
+    end
     return key:sub(1, 3) == "ZO_" or key:sub(1, 3) == "SI_"
 end
 
@@ -1063,16 +1077,24 @@ end
 --- @param _ any
 --- @param key any
 local function globalmiss(_, key)
-    if isNilOrEmpty(key) or reported[key] > CONFIG.MAX_REPORTS or shouldIgnoreGlobal(key) or ignoreLookup[key] then return end
+    if isNilOrEmpty(key) or reported[key] > CONFIG.MAX_REPORTS or shouldIgnoreGlobal(key) or ignoreLookup[key] then
+        return
+    end
 
     local functionNames = ZO_GetCallstackFunctionNames(1)
-    if isControlCreation(functionNames) then return end
+    if isControlCreation(functionNames) then
+        return
+    end
 
     reported[key] = reported[key] + 1
 
     -- Only report every 2^n occurrences to reduce spam
-    if zo_abs(math_frexp(reported[key]) - 0.5) > CONFIG.EPSILON then return end
-    if not msgwin then return end
+    if zo_abs(math_frexp(reported[key]) - 0.5) > CONFIG.EPSILON then
+        return
+    end
+    if not msgwin then
+        return
+    end
 
     local formatStr = type(key) == "string" and "%3dx %q" or "%3dx %s"
     local traceback = debugTraceback("|cFF0000Undefined global|r:" .. key, 2)
@@ -1080,16 +1102,17 @@ local function globalmiss(_, key)
     msgwin:AddText(formatMessage(formatStr, reported[key], key, traceback, functionNames))
 end
 
-EVENT_MANAGER:RegisterForEvent(myNAME, EVENT_ADD_ON_LOADED, function (eventCode, addOnName)
-    if addOnName ~= myNAME then return end
+EVENT_MANAGER:RegisterForEvent(myNAME, EVENT_ADD_ON_LOADED, function(eventCode, addOnName)
+    if addOnName ~= myNAME then
+        return
+    end
     EVENT_MANAGER:UnregisterForEvent(myNAME, eventCode)
 
     -- Initialize saved variables
-    DacksUndefinedGlobalsCatcherSavedVars = DacksUndefinedGlobalsCatcherSavedVars or
-        {
-            userIgnoreGlobals = {},
-            userIgnoreFunctions = {}
-        }
+    DacksUndefinedGlobalsCatcherSavedVars = DacksUndefinedGlobalsCatcherSavedVars or {
+        userIgnoreGlobals = {},
+        userIgnoreFunctions = {},
+    }
     SavedVars = DacksUndefinedGlobalsCatcherSavedVars
 
     -- Ensure the userIgnoreFunctions field exists (for backwards compatibility)
@@ -1102,14 +1125,14 @@ EVENT_MANAGER:RegisterForEvent(myNAME, EVENT_ADD_ON_LOADED, function (eventCode,
     rebuildIgnoreFunctionLookup()
 
     -- Create the message window
-    msgwin = MessageWindow:New("DacksUndefinedGlobalsCatcherWindow", "undefined globals", CONFIG.WINDOW_WIDTH, CONFIG.WINDOW_HEIGHT)
+    msgwin = MessageWindow:New("DacksUndefinedGlobalsCatcherWindow", GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_WINDOW_TITLE), CONFIG.WINDOW_WIDTH, CONFIG.WINDOW_HEIGHT)
 
     -- Register slash commands
-    SLASH_COMMANDS["/undefs"] = function ()
+    SLASH_COMMANDS["/undefs"] = function()
         msgwin:Toggle()
     end
 
-    SLASH_COMMANDS["/undefs_add"] = function (args)
+    SLASH_COMMANDS["/undefs_add"] = function(args)
         local success, message = addGlobalToIgnoreList(args)
         if success then
             displayMessage(message, 0, 1, 0) -- Green for success
@@ -1118,7 +1141,7 @@ EVENT_MANAGER:RegisterForEvent(myNAME, EVENT_ADD_ON_LOADED, function (eventCode,
         end
     end
 
-    SLASH_COMMANDS["/undefs_remove"] = function (args)
+    SLASH_COMMANDS["/undefs_remove"] = function(args)
         local success, message = removeGlobalFromIgnoreList(args)
         if success then
             displayMessage(message, 0, 1, 0) -- Green for success
@@ -1127,11 +1150,11 @@ EVENT_MANAGER:RegisterForEvent(myNAME, EVENT_ADD_ON_LOADED, function (eventCode,
         end
     end
 
-    SLASH_COMMANDS["/undefs_list"] = function ()
+    SLASH_COMMANDS["/undefs_list"] = function()
         listIgnoredGlobals()
     end
 
-    SLASH_COMMANDS["/undefs_addfunc"] = function (args)
+    SLASH_COMMANDS["/undefs_addfunc"] = function(args)
         local success, message = addFunctionToIgnoreList(args)
         if success then
             displayMessage(message, 0, 1, 0) -- Green for success
@@ -1140,7 +1163,7 @@ EVENT_MANAGER:RegisterForEvent(myNAME, EVENT_ADD_ON_LOADED, function (eventCode,
         end
     end
 
-    SLASH_COMMANDS["/undefs_removefunc"] = function (args)
+    SLASH_COMMANDS["/undefs_removefunc"] = function(args)
         local success, message = removeFunctionFromIgnoreList(args)
         if success then
             displayMessage(message, 0, 1, 0) -- Green for success
@@ -1149,11 +1172,11 @@ EVENT_MANAGER:RegisterForEvent(myNAME, EVENT_ADD_ON_LOADED, function (eventCode,
         end
     end
 
-    SLASH_COMMANDS["/undefs_listfunc"] = function ()
+    SLASH_COMMANDS["/undefs_listfunc"] = function()
         listIgnoredFunctions()
     end
 
-    SLASH_COMMANDS["/undefs_help"] = function ()
+    SLASH_COMMANDS["/undefs_help"] = function()
         showHelp()
     end
 

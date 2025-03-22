@@ -11,4 +11,9 @@
 ## Description: Debugging utility that reports failed _G lookups. It can help you track UI errors like "12345678901234567890:1: attempt to index a nil value"
 ## SavedVariables: DacksUndefinedGlobalsCatcherSavedVars
 
+# Load localization files
+lang/en.lua
+lang/$(language).lua
+
+# Main addon file
 DacksUndefinedGlobalsCatcher.lua

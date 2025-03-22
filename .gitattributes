@@ -4,6 +4,7 @@
 *.addon  eol=crlf
 *.txt  eol=crlf
 *.lua  eol=crlf
+*.toml  eol=crlf
 *.xml  eol=crlf
 *.md   eol=crlf
 
