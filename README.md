@@ -39,6 +39,9 @@ DacksUndefinedGlobalsCatcher helps by:
 - **Multi-platform Support**:
   - Compatible with both keyboard/mouse and gamepad (Console) UI
   - Automatically adapts font and UI elements to the current mode
+- **Localization Support**:
+  - Available in multiple languages: English, German (de), Spanish (es), French (fr), Japanese (jp), Russian (ru), and Traditional Chinese (zh)
+  - Automatically uses your game's language setting
 
 ## Installation
 
