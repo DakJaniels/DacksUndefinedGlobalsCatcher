@@ -2,11 +2,11 @@
 
 local strings = {
     -- Window title
-    DACKS_UNDEFINED_GLOBALS_CATCHER_WINDOW_TITLE = "Nicht definierte Globale",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_WINDOW_TITLE = "Nicht definierte Globale Variablen",
 
     -- Commands
-    DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_TOGGLE = "Fenster für nicht definierte Globale ein-/ausblenden",
-    DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_LIST = "Alle ignorierten Globale auflisten",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_TOGGLE = "Fenster für nicht definierte Globals ein-/ausblenden",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_LIST = "Alle ignorierten Globals auflisten",
     DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_ADD = "Global zur Ignorierliste hinzufügen",
     DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_REMOVE = "Global von der Ignorierliste entfernen",
     DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_LISTFUNC = "Alle ignorierten Funktionsmuster auflisten",
@@ -33,11 +33,11 @@ local strings = {
     DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_PATTERN_CANNOT_REMOVE_DEFAULT = "'%s' ist in der Standard-Funktions-Ignorierliste und kann nicht entfernt werden",
 
     -- List headers
-    DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_DEFAULT_GLOBALS = "===== STANDARD-IGNORIERTE GLOBALE =====",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_DEFAULT_GLOBALS = "===== STANDARD-IGNORIERTE GLOBALS =====",
     DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_DEFAULT_GLOBALS_DESC = "Diese können nicht entfernt werden:",
-    DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_USER_GLOBALS = "===== BENUTZER-IGNORIERTE GLOBALE =====",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_USER_GLOBALS = "===== BENUTZER-IGNORIERTE GLOBALS =====",
     DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_USER_GLOBALS_DESC = "Verwalten Sie diese mit /undefs_add und /undefs_remove",
-    DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_NO_USER_GLOBALS = "Keine benutzerdefinierten ignorierten Globale",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_NO_USER_GLOBALS = "Keine benutzerdefinierten ignorierten Globals",
 
     -- Function list headers
     DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_DEFAULT_FUNCS = "===== STANDARD-IGNORIERTE FUNKTIONSMUSTER =====",
@@ -47,7 +47,7 @@ local strings = {
     DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_NO_USER_FUNCS = "Keine benutzerdefinierten ignorierten Funktionsmuster",
 
     -- Help header
-    DACKS_UNDEFINED_GLOBALS_CATCHER_HELP_HEADER = "===== BEFEHLE FÜR NICHT DEFINIERTE GLOBALE =====",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_HELP_HEADER = "===== BEFEHLE FÜR NICHT DEFINIERTE GLOBALS =====",
 
     -- Update messages
     DACKS_UNDEFINED_GLOBALS_CATCHER_UPDATE_IGNORE_LIST = "Ignorierliste aktualisiert: %d Standardeinträge + %d Benutzereinträge",
