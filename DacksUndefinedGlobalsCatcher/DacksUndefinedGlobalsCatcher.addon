@@ -17,3 +17,7 @@ lang/$(language).lua
 
 # Main addon file
 DacksUndefinedGlobalsCatcher.lua
+
+# For defining simple undefined constants or misspellings.
+# Uncomment to use if you wish.
+;custom_fixes.lua
