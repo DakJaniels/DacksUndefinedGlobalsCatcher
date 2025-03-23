@@ -56,10 +56,11 @@ local strings = {
     -- Traceback formatting
     DACKS_UNDEFINED_GLOBALS_CATCHER_TRACEBACK_HEADER = "Aufrufstapel:",
     DACKS_UNDEFINED_GLOBALS_CATCHER_TRACEBACK_LOCALS = "Lokale Variablen:",
-    DACKS_UNDEFINED_GLOBALS_CATCHER_TRACEBACK_TRACE = "Stapelspur:",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TRACEBACK_TRACE = "Rückverfolgung:",
 }
 
 for stringId, stringValue in pairs(strings) do
-    ZO_CreateStringId(stringId, stringValue)
-    SafeAddVersion(stringId, 2)
+    --ZO_CreateStringId(stringId, stringValue)
+    --SafeAddVersion(stringId, 2)
+    SafeAddString(_G[stringId], stringValue, 2)
 end
