@@ -267,13 +267,6 @@ function MessageWindow:CreateUI()
         self:AdjustSlider()
     end)
 
-    -- Add a control panel for managing ignore lists
-    self:CreateManagementPanel()
-end
-
--- New function to create the management panel
-function MessageWindow:CreateManagementPanel()
-    local font = getUsableFont()
     -- Create the panel container
     self.managePanel = WINDOW_MANAGER:CreateControl(self.name .. "ManagePanel", self.control, CT_CONTROL)
     self.managePanel:SetDimensions(self.width - 40, 36)
@@ -359,11 +352,15 @@ function MessageWindow:CreateManagementPanel()
     removeButtonBg:SetCenterColor(0.5, 0.2, 0.2, 0.85)
     removeButtonBg:SetEdgeColor(0.7, 0.3, 0.3, 0.5)
 
-    -- Create the edit box (following XML structure)
+    -- Create the edit box
     self.editBox = WINDOW_MANAGER:CreateControl(self.name .. "EditBox", self.managePanel, CT_EDITBOX)
+    self.editBox:SetMouseEnabled(true)
+    self.editBox:SetDrawLayer(DL_CONTROLS)
+    self.editBox:SetDrawTier(DT_HIGH)
+    self.editBox:SetDrawLevel(42)
     self.editBox:SetFont(font)
     self.editBox:SetAnchor(LEFT, self.modeLabelButton, RIGHT, 8, 0)
-    self.editBox:SetAnchor(RIGHT, actionButtonsContainer, LEFT, -8, 0)
+    self.editBox:SetAnchor(RIGHT, actionButtonsContainer, LEFT, -40, 0)
     self.editBox:SetDimensions(0, 20) -- Width will be determined by anchors
     self.editBox:SetMaxInputChars(100)
 
@@ -372,6 +369,31 @@ function MessageWindow:CreateManagementPanel()
     editBg:SetAnchorFill(self.editBox)
     editBg:SetCenterColor(0, 0, 0, 0.5)
     editBg:SetEdgeColor(0.5, 0.5, 0.5, 0.5)
+
+    -- Set up the edit box
+    self.editBox:SetEditEnabled(true) -- Enable editing
+    self.editBox:SetSelectAllOnFocus(true) -- Select all text on focus
+    self.editBox:SetNewLineEnabled(false) -- Disable new lines if you want single-line input
+    self.editBox:SetPasteEnabled(true) -- Allow pasting text
+
+    -- Add event handlers for the edit box
+    self.editBox:SetHandler("OnEnter", function()
+        self:AddCurrentItem() -- Call the function to add the item when Enter is pressed
+    end)
+
+    self.editBox:SetHandler("OnMouseDown", function()
+        if not self.editBox:HasFocus() then
+            self.editBox:TakeFocus() -- Make the edit box focusable
+        end
+    end)
+
+    self.editBox:SetHandler("OnFocusLost", function()
+        self.editBox:LoseFocus()
+    end)
+
+    self.editBox:SetHandler("OnTextChanged", function()
+        -- Handle text changes if needed
+    end)
 
     -- Make mode selector clickable to toggle between globals and functions
     self.modeButton:SetHandler("OnClicked", function()
