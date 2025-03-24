@@ -4,6 +4,17 @@ local strings = {
     -- Window title
     DACKS_UNDEFINED_GLOBALS_CATCHER_WINDOW_TITLE = "未定義のグローバル変数",
 
+    -- Mode
+    DACKS_UNDEFINED_GLOBALS_CATCHER_MODE_GLOBALS = "グローバル",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_MODE_FUNCTIONS = "関数",
+
+    -- Button
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_ADD = "追加",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_REMOVE = "削除",
+
+    -- Message
+    DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_INPUT = "名前またはパターンを先に入力してください。",
+
     -- Commands
     DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_TOGGLE = "未定義のグローバル変数ウィンドウを表示/非表示",
     DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_LIST = "無視されたグローバル変数を一覧表示",

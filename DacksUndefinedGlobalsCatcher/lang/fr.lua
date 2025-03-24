@@ -4,6 +4,17 @@ local strings = {
     -- Window title
     DACKS_UNDEFINED_GLOBALS_CATCHER_WINDOW_TITLE = "Variables globales non définies",
 
+    -- Mode
+    DACKS_UNDEFINED_GLOBALS_CATCHER_MODE_GLOBALS = "Globales",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_MODE_FUNCTIONS = "Fonctions",
+
+    -- Button
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_ADD = "Ajouter",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_REMOVE = "Supprimer",
+
+    -- Message
+    DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_INPUT = "Veuillez d'abord saisir un nom ou un modèle.",
+
     -- Commands
     DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_TOGGLE = "Afficher/masquer la fenêtre des variables globales non définies",
     DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_LIST = "Lister toutes les variables globales ignorées",

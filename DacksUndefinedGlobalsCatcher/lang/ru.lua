@@ -4,6 +4,17 @@ local strings = {
     -- Window title
     DACKS_UNDEFINED_GLOBALS_CATCHER_WINDOW_TITLE = "Неопределенные глобальные переменные",
 
+    -- Mode
+    DACKS_UNDEFINED_GLOBALS_CATCHER_MODE_GLOBALS = "Глобальные",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_MODE_FUNCTIONS = "Функции",
+
+    -- Button
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_ADD = "Добавить",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_REMOVE = "Удалить",
+
+    -- Message
+    DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_INPUT = "Пожалуйста, сначала введите имя или шаблон.",
+
     -- Commands
     DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_TOGGLE = "Показать/скрыть окно неопределенных глобальных переменных",
     DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_LIST = "Показать список игнорируемых глобальных переменных",
