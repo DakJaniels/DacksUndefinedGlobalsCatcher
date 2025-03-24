@@ -28,6 +28,9 @@ local ReloadUI = _G.ReloadUI
 local WINDOW_MANAGER = _G.GetWindowManager()
 local ANIMATION_MANAGER = _G.GetAnimationManager()
 
+-- -----------------------------------------------------------------------------
+-- Forwards.
+-- -----------------------------------------------------------------------------
 local listIgnoredFunctions
 local listIgnoredGlobals
 local removeGlobalFromIgnoreList
@@ -42,14 +45,27 @@ local isControlCreation
 local shouldIgnoreGlobal
 local globalmiss
 local getUsableFont
+local isNilOrEmpty
+local prettyPrint
+local formatMessage
+local ShowMsgWin
+local HideMsgWin
+-- -----------------------------------------------------------------------------
 
 if not SLASH_COMMANDS["/rl"] then
     SLASH_COMMANDS["/rl"] = function()
         ReloadUI("ingame")
     end
 end
+-- -----------------------------------------------------------------------------
+-- Utility Functions.
+-- -----------------------------------------------------------------------------
 
-getUsableFont = function(font)
+---
+---@param font? string
+---@return string
+function getUsableFont(font)
+    font = font or ""
     if IsInGamepadPreferredMode() or IsConsoleUI() then
         font = "$(GAMEPAD_MEDIUM_FONT)|$(GP_18)|soft-shadow-thick"
     else
@@ -58,20 +74,188 @@ getUsableFont = function(font)
     return font
 end
 
+---@generic T
+---@param value T
+---@return boolean
+function isNilOrEmpty(value)
+    return value == nil or (type(value) == "string" and value == "")
+end
+
+-- Pretty prints a table with proper indentation and formatting
+--- @param value any The value to pretty print
+--- @param indent number? The current indentation level
+--- @param done table? Table to track already printed tables (prevents infinite recursion)
+--- @return string
+function prettyPrint(value, indent, done)
+    indent = indent or 0
+    done = done or {}
+
+    -- Handle non-table values
+    if type(value) ~= "table" then
+        if type(value) == "string" then
+            return string_format("%q", value)
+        end
+        return tostring(value)
+    end
+
+    if done[value] then
+        return "<circular reference>"
+    end
+
+    done[value] = true
+    local padding = string_rep("  ", indent)
+    local lines = {}
+
+    -- Sort keys for consistent output
+    local keys = {}
+    for k in pairs(value) do
+        table_insert(keys, k)
+    end
+    table_sort(keys, function(a, b)
+        return tostring(a) < tostring(b)
+    end)
+
+    for _, k in ipairs(keys) do
+        local v = value[k]
+        local entry = padding
+        if type(k) == "number" then
+            entry = entry .. "[" .. k .. "]"
+        else
+            entry = entry .. k
+        end
+        entry = entry .. " = "
+
+        if type(v) == "table" then
+            if next(v) == nil then
+                entry = entry .. "{}"
+            else
+                entry = entry .. "{\n" .. prettyPrint(v, indent + 1, done) .. "\n" .. padding .. "}"
+            end
+        else
+            if type(v) == "string" then
+                entry = entry .. string_format("%q", v)
+            else
+                entry = entry .. tostring(v)
+            end
+        end
+        table_insert(lines, entry)
+    end
+
+    return table_concat(lines, "\n")
+end
+
+-- Formats the error message with proper alignment and colors
+--- @param formatStr string
+--- @param reportedKey number
+--- @param key any
+--- @param traceback string
+--- @param functionNames string[]
+--- @return string
+function formatMessage(formatStr, reportedKey, key, traceback, functionNames)
+    -- Improved header with count and key
+    local header = string_format("|cFFD700%s|r", string_format(formatStr, reportedKey, key))
+
+    -- Format the call stack with improved colors and indentation
+    local callStackInfo = { "|c5C88DA" .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_TRACEBACK_HEADER) .. "|r" }
+    for i, functionName in ipairs(functionNames) do
+        -- Use different colors for different types of functions
+        local color = "|cCCCCCC" -- Default gray
+
+        -- Highlight scene-related functions in light blue
+        if functionName:find("Scene") then
+            color = "|c88CCFF"
+            -- Highlight ZO_ functions in green
+        elseif functionName:find("^ZO_") then
+            color = "|c99EEBB"
+            -- Highlight anonymous functions in orange
+        elseif functionName:find("anonymous") then
+            color = "|cFFCC99"
+        end
+
+        table_insert(callStackInfo, string_format("  %2d. %s%s|r", i, color, functionName))
+    end
+
+    -- Extract locals from traceback if present
+    local locals = traceback:match("<[Ll]ocals>(.+)</[Ll]ocals>")
+    --- @cast locals string
+    if locals then
+        -- Convert common ESO boolean flags
+        locals = locals:gsub("=%s*F%s*[,}]", "= false%1")
+        locals = locals:gsub("=%s*T%s*[,}]", "= true%1")
+
+        -- Handle array-style tables [table:1]
+        locals = locals:gsub("%[table:(%d+)%]", "{}")
+
+        -- Convert the locals string into a proper table format
+        locals = locals:gsub("=%s*{%s*}", "= {}") -- Handle empty tables
+
+        -- Clean up the locals string to make it valid Lua
+        locals = locals:gsub("=%s*{([^}]+)}", function(content)
+            -- Format table contents properly
+            local cleaned = content
+                :gsub("%s+", " ") -- Normalize whitespace
+                :gsub("([%w_]+)%s*=%s*([^,}]+)", "%1 = %2") -- Fix key-value pairs
+                :gsub(",%s*}", "}") -- Remove trailing commas
+            return "= {" .. cleaned .. "}"
+        end)
+
+        -- Add quotes around string keys if needed
+        locals = locals:gsub("([%w_]+)%s*=", function(keyName)
+            -- Don't quote 'self' as it's a special case
+            if keyName == "self" then
+                return keyName .. " ="
+            end
+            return string_format("%q = ", keyName)
+        end)
+
+        local localsFunc, _ = LoadString("return {" .. locals .. "}", "locals")
+        if localsFunc then
+            local success, result = pcall(localsFunc)
+            if success and type(result) == "table" then
+                locals = "\n|cE6CC80" .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_TRACEBACK_LOCALS) .. "|r\n" .. prettyPrint(result, 1) .. "\n"
+                traceback = traceback:gsub("<[Ll]ocals>.+</[Ll]ocals>", locals)
+            end
+        end
+    end
+
+    -- Format traceback for better readability
+    traceback = traceback:gsub("stack traceback:", "|cFF6666" .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_TRACEBACK_TRACE) .. "|r")
+
+    -- Colorize file paths in traceback
+    traceback = traceback:gsub("([%w_/\\%.]+%.lua:%d+:)", "|cAAFFAA%1|r")
+
+    -- Highlight 'in function' parts
+    traceback = traceback:gsub("(in function%s+[%w_:'%.]+)", "|c99DDFF%1|r")
+
+    -- Highlight 'Undefined global' message
+    traceback = traceback:gsub("(|cFF0000Undefined global|r:[^%s]+)", "|cFF5555%1|r")
+
+    -- Ensure consistent line endings and create the final message with better spacing
+    local message = header .. "\n\n" .. traceback .. "\n\n" .. table_concat(callStackInfo, "\n") .. "\n"
+
+    return (message:gsub("\r\n", "\n")) -- Normalize any Windows line endings, capture only first return value
+end
+
 -- Helper functions for showing/hiding the window
-local function ShowMsgWin(win)
+---
+---@param win Control
+function ShowMsgWin(win)
     if win then
         win:SetHidden(false)
     end
 end
 
-local function HideMsgWin(win)
+---
+---@param win Control
+function HideMsgWin(win)
     if win then
         win:SetHidden(true)
     end
 end
+-- -----------------------------------------------------------------------------
 
 -- Our message window implementation using ZO_DeferredInitializingObject
+-- -----------------------------------------------------------------------------
 --- @class MessageWindow : ZO_DeferredInitializingObject
 local MessageWindow = ZO_DeferredInitializingObject:Subclass()
 
@@ -556,7 +740,7 @@ function MessageWindow:AdjustSlider()
     local sliderMin, sliderMax = self.slider:GetMinMax()
     local sliderValue = self.slider:GetValue()
 
-    self.slider:SetMinMax(0, numHistoryLines)
+    self.slider:SetMinMax(sliderMin or 0, numHistoryLines)
 
     -- If the slider's at the bottom, stay at the bottom to show new text
     if sliderValue == sliderMax then
@@ -634,166 +818,6 @@ function MessageWindow:IsShowing()
     else
         return self.control and not self.control:IsControlHidden()
     end
-end
-
--- Utility functions
-local function isNilOrEmpty(value)
-    return value == nil or (type(value) == "string" and value == "")
-end
-
--- Pretty prints a table with proper indentation and formatting
---- @param value any The value to pretty print
---- @param indent number? The current indentation level
---- @param done table? Table to track already printed tables (prevents infinite recursion)
---- @return string
-local function prettyPrint(value, indent, done)
-    indent = indent or 0
-    done = done or {}
-
-    -- Handle non-table values
-    if type(value) ~= "table" then
-        if type(value) == "string" then
-            return string_format("%q", value)
-        end
-        return tostring(value)
-    end
-
-    if done[value] then
-        return "<circular reference>"
-    end
-
-    done[value] = true
-    local padding = string_rep("  ", indent)
-    local lines = {}
-
-    -- Sort keys for consistent output
-    local keys = {}
-    for k in pairs(value) do
-        table_insert(keys, k)
-    end
-    table_sort(keys, function(a, b)
-        return tostring(a) < tostring(b)
-    end)
-
-    for _, k in ipairs(keys) do
-        local v = value[k]
-        local entry = padding
-        if type(k) == "number" then
-            entry = entry .. "[" .. k .. "]"
-        else
-            entry = entry .. k
-        end
-        entry = entry .. " = "
-
-        if type(v) == "table" then
-            if next(v) == nil then
-                entry = entry .. "{}"
-            else
-                entry = entry .. "{\n" .. prettyPrint(v, indent + 1, done) .. "\n" .. padding .. "}"
-            end
-        else
-            if type(v) == "string" then
-                entry = entry .. string_format("%q", v)
-            else
-                entry = entry .. tostring(v)
-            end
-        end
-        table_insert(lines, entry)
-    end
-
-    return table_concat(lines, "\n")
-end
-
--- Formats the error message with proper alignment and colors
---- @param formatStr string
---- @param reportedKey number
---- @param key any
---- @param traceback string
---- @param functionNames string[]
---- @return string
-local function formatMessage(formatStr, reportedKey, key, traceback, functionNames)
-    -- Improved header with count and key
-    local header = string_format("|cFFD700%s|r", string_format(formatStr, reportedKey, key))
-
-    -- Format the call stack with improved colors and indentation
-    local callStackInfo = { "|c5C88DA" .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_TRACEBACK_HEADER) .. "|r" }
-    for i, functionName in ipairs(functionNames) do
-        -- Use different colors for different types of functions
-        local color = "|cCCCCCC" -- Default gray
-
-        -- Highlight scene-related functions in light blue
-        if functionName:find("Scene") then
-            color = "|c88CCFF"
-            -- Highlight ZO_ functions in green
-        elseif functionName:find("^ZO_") then
-            color = "|c99EEBB"
-            -- Highlight anonymous functions in orange
-        elseif functionName:find("anonymous") then
-            color = "|cFFCC99"
-        end
-
-        table_insert(callStackInfo, string_format("  %2d. %s%s|r", i, color, functionName))
-    end
-
-    -- Extract locals from traceback if present
-    local locals = traceback:match("<[Ll]ocals>(.+)</[Ll]ocals>")
-    --- @cast locals string
-    if locals then
-        -- Convert common ESO boolean flags
-        locals = locals:gsub("=%s*F%s*[,}]", "= false%1")
-        locals = locals:gsub("=%s*T%s*[,}]", "= true%1")
-
-        -- Handle array-style tables [table:1]
-        locals = locals:gsub("%[table:(%d+)%]", "{}")
-
-        -- Convert the locals string into a proper table format
-        locals = locals:gsub("=%s*{%s*}", "= {}") -- Handle empty tables
-
-        -- Clean up the locals string to make it valid Lua
-        locals = locals:gsub("=%s*{([^}]+)}", function(content)
-            -- Format table contents properly
-            local cleaned = content
-                :gsub("%s+", " ") -- Normalize whitespace
-                :gsub("([%w_]+)%s*=%s*([^,}]+)", "%1 = %2") -- Fix key-value pairs
-                :gsub(",%s*}", "}") -- Remove trailing commas
-            return "= {" .. cleaned .. "}"
-        end)
-
-        -- Add quotes around string keys if needed
-        locals = locals:gsub("([%w_]+)%s*=", function(keyName)
-            -- Don't quote 'self' as it's a special case
-            if keyName == "self" then
-                return keyName .. " ="
-            end
-            return string_format("%q = ", keyName)
-        end)
-
-        local localsFunc, _ = LoadString("return {" .. locals .. "}", "locals")
-        if localsFunc then
-            local success, result = pcall(localsFunc)
-            if success and type(result) == "table" then
-                locals = "\n|cE6CC80" .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_TRACEBACK_LOCALS) .. "|r\n" .. prettyPrint(result, 1) .. "\n"
-                traceback = traceback:gsub("<[Ll]ocals>.+</[Ll]ocals>", locals)
-            end
-        end
-    end
-
-    -- Format traceback for better readability
-    traceback = traceback:gsub("stack traceback:", "|cFF6666" .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_TRACEBACK_TRACE) .. "|r")
-
-    -- Colorize file paths in traceback
-    traceback = traceback:gsub("([%w_/\\%.]+%.lua:%d+:)", "|cAAFFAA%1|r")
-
-    -- Highlight 'in function' parts
-    traceback = traceback:gsub("(in function%s+[%w_:'%.]+)", "|c99DDFF%1|r")
-
-    -- Highlight 'Undefined global' message
-    traceback = traceback:gsub("(|cFF0000Undefined global|r:[^%s]+)", "|cFF5555%1|r")
-
-    -- Ensure consistent line endings and create the final message with better spacing
-    local message = header .. "\n\n" .. traceback .. "\n\n" .. table_concat(callStackInfo, "\n") .. "\n"
-
-    return (message:gsub("\r\n", "\n")) -- Normalize any Windows line endings, capture only first return value
 end
 
 -- Configuration
