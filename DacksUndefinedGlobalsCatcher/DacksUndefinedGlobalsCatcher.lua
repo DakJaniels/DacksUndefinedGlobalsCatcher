@@ -28,17 +28,34 @@ local ReloadUI = _G.ReloadUI
 local WINDOW_MANAGER = _G.GetWindowManager()
 local ANIMATION_MANAGER = _G.GetAnimationManager()
 
+local listIgnoredFunctions
+local listIgnoredGlobals
+local removeGlobalFromIgnoreList
+local removeFunctionFromIgnoreList
+local addGlobalToIgnoreList
+local addFunctionToIgnoreList
+local rebuildIgnoreFunctionLookup
+local rebuildIgnoreLookup
+local showHelp
+local displayMessage
+local isControlCreation
+local shouldIgnoreGlobal
+local globalmiss
+local getUsableFont
+
 if not SLASH_COMMANDS["/rl"] then
     SLASH_COMMANDS["/rl"] = function()
         ReloadUI("ingame")
     end
 end
 
-local font
-if IsInGamepadPreferredMode() or IsConsoleUI() then
-    font = "$(GAMEPAD_MEDIUM_FONT)|$(GP_18)|soft-shadow-thick"
-else
-    font = "$(BOLD_FONT)|$(KB_18)|soft-shadow-thin"
+getUsableFont = function(font)
+    if IsInGamepadPreferredMode() or IsConsoleUI() then
+        font = "$(GAMEPAD_MEDIUM_FONT)|$(GP_18)|soft-shadow-thick"
+    else
+        font = "$(BOLD_FONT)|$(KB_18)|soft-shadow-thin"
+    end
+    return font
 end
 
 -- Helper functions for showing/hiding the window
@@ -51,12 +68,6 @@ end
 local function HideMsgWin(win)
     if win then
         win:SetHidden(true)
-    end
-end
-
-local function toggleWindow(win)
-    if win then
-        win:Toggle()
     end
 end
 
@@ -137,6 +148,7 @@ end
 -- Create all UI elements
 function MessageWindow:CreateUI()
     local maxWidth, maxHeight = GuiRoot:GetDimensions()
+    local font = getUsableFont()
     -- Create window background
     self.bg = WINDOW_MANAGER:CreateControl(self.name .. "Bg", self.control, CT_BACKDROP)
     self.bg:SetAnchor(TOPLEFT, self.control, TOPLEFT, -8, -6)
@@ -154,6 +166,7 @@ function MessageWindow:CreateUI()
     self.headerBg:SetAnchor(TOPRIGHT, self.control, TOPRIGHT, 0, 40)
     self.headerBg:SetCenterColor(0.1, 0.1, 0.15, 1.0) -- Dark blue-gray color
     self.headerBg:SetEdgeColor(0.3, 0.3, 0.4, 1.0)
+    self.headerBg:SetAlpha(0)
 
     -- Create a solid backdrop for better text contrast - completely opaque
     self.bgSolid = WINDOW_MANAGER:CreateControl(self.name .. "BgSolid", self.control, CT_BACKDROP)
@@ -253,6 +266,202 @@ function MessageWindow:CreateUI()
     self.control:SetHandler("OnResized", function()
         self:AdjustSlider()
     end)
+
+    -- Add a control panel for managing ignore lists
+    self:CreateManagementPanel()
+end
+
+-- New function to create the management panel
+function MessageWindow:CreateManagementPanel()
+    local font = getUsableFont()
+    -- Create the panel container
+    self.managePanel = WINDOW_MANAGER:CreateControl(self.name .. "ManagePanel", self.control, CT_CONTROL)
+    self.managePanel:SetDimensions(self.width - 40, 36)
+    self.managePanel:SetAnchor(BOTTOMLEFT, self.control, BOTTOMLEFT, 20, -20)
+    self.managePanel:SetAnchor(BOTTOMRIGHT, self.control, BOTTOMRIGHT, -40, -20)
+
+    -- Create panel backdrop
+    local panelBg = WINDOW_MANAGER:CreateControl(self.name .. "ManagePanelBg", self.managePanel, CT_BACKDROP)
+    panelBg:SetAnchorFill(self.managePanel)
+    panelBg:SetCenterColor(0.1, 0.1, 0.15, 0.85)
+    panelBg:SetEdgeColor(0.3, 0.3, 0.4, 0.5)
+    panelBg:SetPixelRoundingEnabled(true)
+
+    -- Create mode toggle button (similar to the Button in XML)
+    self.modeButton = WINDOW_MANAGER:CreateControl(self.name .. "ModeButton", self.managePanel, CT_BUTTON)
+    self.modeButton:SetDimensions(28, 28)
+    self.modeButton:SetAnchor(LEFT, self.managePanel, LEFT, 1, 0)
+    self.modeButton:SetNormalTexture("EsoUI/Art/LFG/LFG_tabIcon_groupTools_up.dds")
+    self.modeButton:SetPressedTexture("EsoUI/Art/LFG/LFG_tabIcon_groupTools_down.dds")
+    self.modeButton:SetMouseOverTexture("EsoUI/Art/LFG/LFG_tabIcon_groupTools_over.dds")
+
+    -- Create mode label button (similar to ModeButton in XML)
+    self.modeLabelButton = WINDOW_MANAGER:CreateControl(self.name .. "ModeLabelButton", self.managePanel, CT_BUTTON)
+    self.modeLabelButton:SetDimensions(90, 20)
+    self.modeLabelButton:SetAnchor(LEFT, self.modeButton, RIGHT, 4, 0)
+    self.modeLabelButton:SetFont(font)
+    self.modeLabelButton:SetNormalFontColor(0.9, 0.9, 0.9, 1)
+    self.modeLabelButton:SetMouseOverFontColor(1, 1, 0.8, 1)
+    self.modeLabelButton:SetText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MODE_GLOBALS))
+
+    -- Create button background
+    local buttonBg = WINDOW_MANAGER:CreateControl(self.name .. "ButtonBg", self.managePanel, CT_TEXTURE)
+    buttonBg:SetAnchor(TOPLEFT, self.managePanel, TOPLEFT, 1, 1)
+    buttonBg:SetAnchor(BOTTOMRIGHT, self.modeLabelButton, BOTTOMRIGHT, 1, 0)
+    buttonBg:SetColor(0.2, 0.2, 0.6, 0.2)
+
+    -- Create action buttons container (like ComboBox but we'll use buttons)
+    local actionButtonsContainer = WINDOW_MANAGER:CreateControl(self.name .. "ActionButtons", self.managePanel, CT_CONTROL)
+    actionButtonsContainer:SetDimensions(180, 22)
+    actionButtonsContainer:SetAnchor(RIGHT, self.managePanel, RIGHT, -4, 0)
+
+    -- Create the help button (new addition)
+    self.helpButton = WINDOW_MANAGER:CreateControl(self.name .. "HelpButton", self.managePanel, CT_BUTTON)
+    self.helpButton:SetDimensions(22, 22)
+    self.helpButton:SetAnchor(RIGHT, actionButtonsContainer, LEFT, -8, 0)
+    self.helpButton:SetNormalTexture("EsoUI/Art/Notifications/notification_help_up.dds")
+    self.helpButton:SetPressedTexture("EsoUI/Art/Notifications/notification_help_down.dds")
+    self.helpButton:SetMouseOverTexture("EsoUI/Art/Notifications/notification_help_over.dds")
+
+    -- Create the help button's backdrop for styling
+    local helpButtonBg = WINDOW_MANAGER:CreateControl(self.name .. "HelpButtonBg", self.helpButton, CT_BACKDROP)
+    helpButtonBg:SetAnchorFill(self.helpButton)
+    helpButtonBg:SetCenterColor(0.2, 0.2, 0.5, 0.5)
+    helpButtonBg:SetEdgeColor(0.4, 0.4, 0.8, 0.5)
+
+    -- Create the add button
+    self.addButton = WINDOW_MANAGER:CreateControl(self.name .. "AddButton", actionButtonsContainer, CT_BUTTON)
+    self.addButton:SetDimensions(80, 22)
+    self.addButton:SetAnchor(LEFT, actionButtonsContainer, LEFT, 0, 0)
+    self.addButton:SetFont(font)
+    self.addButton:SetNormalFontColor(0.9, 0.9, 0.9, 1)
+    self.addButton:SetMouseOverFontColor(1, 1, 0.8, 1)
+    self.addButton:SetText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_ADD))
+
+    -- Create add button backdrop
+    local addButtonBg = WINDOW_MANAGER:CreateControl(self.name .. "AddButtonBg", self.addButton, CT_BACKDROP)
+    addButtonBg:SetAnchorFill(self.addButton)
+    addButtonBg:SetCenterColor(0.2, 0.5, 0.2, 0.85)
+    addButtonBg:SetEdgeColor(0.3, 0.7, 0.3, 0.5)
+
+    -- Create the remove button
+    self.removeButton = WINDOW_MANAGER:CreateControl(self.name .. "RemoveButton", actionButtonsContainer, CT_BUTTON)
+    self.removeButton:SetDimensions(80, 22)
+    self.removeButton:SetAnchor(RIGHT, actionButtonsContainer, RIGHT, 0, 0)
+    self.removeButton:SetFont(font)
+    self.removeButton:SetNormalFontColor(0.9, 0.9, 0.9, 1)
+    self.removeButton:SetMouseOverFontColor(1, 0.8, 0.8, 1)
+    self.removeButton:SetText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_REMOVE))
+
+    -- Create remove button backdrop
+    local removeButtonBg = WINDOW_MANAGER:CreateControl(self.name .. "RemoveButtonBg", self.removeButton, CT_BACKDROP)
+    removeButtonBg:SetAnchorFill(self.removeButton)
+    removeButtonBg:SetCenterColor(0.5, 0.2, 0.2, 0.85)
+    removeButtonBg:SetEdgeColor(0.7, 0.3, 0.3, 0.5)
+
+    -- Create the edit box (following XML structure)
+    self.editBox = WINDOW_MANAGER:CreateControl(self.name .. "EditBox", self.managePanel, CT_EDITBOX)
+    self.editBox:SetFont(font)
+    self.editBox:SetAnchor(LEFT, self.modeLabelButton, RIGHT, 8, 0)
+    self.editBox:SetAnchor(RIGHT, actionButtonsContainer, LEFT, -8, 0)
+    self.editBox:SetDimensions(0, 20) -- Width will be determined by anchors
+    self.editBox:SetMaxInputChars(100)
+
+    -- Create edit box backdrop
+    local editBg = WINDOW_MANAGER:CreateControl(self.name .. "EditBg", self.editBox, CT_BACKDROP)
+    editBg:SetAnchorFill(self.editBox)
+    editBg:SetCenterColor(0, 0, 0, 0.5)
+    editBg:SetEdgeColor(0.5, 0.5, 0.5, 0.5)
+
+    -- Make mode selector clickable to toggle between globals and functions
+    self.modeButton:SetHandler("OnClicked", function()
+        self:ToggleMode()
+    end)
+
+    self.modeLabelButton:SetHandler("OnClicked", function()
+        self:ToggleMode()
+    end)
+
+    self.currentMode = "globals" -- Default mode is globals
+
+    -- Add handlers for the buttons
+    self.addButton:SetHandler("OnClicked", function()
+        self:AddCurrentItem()
+    end)
+
+    self.removeButton:SetHandler("OnClicked", function()
+        self:RemoveCurrentItem()
+    end)
+
+    -- Add handler for the help button
+    self.helpButton:SetHandler("OnClicked", function()
+        showHelp()
+    end)
+
+    -- Make the buffer a bit smaller to make room for our panel
+    self.buffer:ClearAnchors()
+    self.buffer:SetAnchor(TOPLEFT, self.control, TOPLEFT, 20, 45)
+    self.buffer:SetAnchor(BOTTOMRIGHT, self.control, BOTTOMRIGHT, -35, -60)
+
+    -- Adjust slider too
+    self.slider:ClearAnchors()
+    self.slider:SetAnchor(TOPRIGHT, self.control, TOPRIGHT, -25, 60)
+    self.slider:SetAnchor(BOTTOMRIGHT, self.control, BOTTOMRIGHT, -15, -60)
+end
+
+-- Toggle between globals and functions mode
+function MessageWindow:ToggleMode()
+    if self.currentMode == "globals" then
+        self.currentMode = "functions"
+        self.modeLabelButton:SetText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MODE_FUNCTIONS))
+    else
+        self.currentMode = "globals"
+        self.modeLabelButton:SetText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MODE_GLOBALS))
+    end
+end
+
+-- Add the current item from the edit box
+function MessageWindow:AddCurrentItem()
+    local text = self.editBox:GetText()
+    if text and text ~= "" then
+        local success, message
+
+        if self.currentMode == "globals" then
+            success, message = addGlobalToIgnoreList(text)
+        else
+            success, message = addFunctionToIgnoreList(text)
+        end
+
+        displayMessage(message, success and 0 or 1, success and 1 or 0, 0)
+
+        if success then
+            self.editBox:SetText("")
+        end
+    else
+        displayMessage(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_INPUT), 1, 0, 0)
+    end
+end
+
+-- Remove the current item from the edit box
+function MessageWindow:RemoveCurrentItem()
+    local text = self.editBox:GetText()
+    if text and text ~= "" then
+        local success, message
+
+        if self.currentMode == "globals" then
+            success, message = removeGlobalFromIgnoreList(text)
+        else
+            success, message = removeFunctionFromIgnoreList(text)
+        end
+
+        displayMessage(message, success and 0 or 1, success and 1 or 0, 0)
+
+        if success then
+            self.editBox:SetText("")
+        end
+    else
+        displayMessage(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_INPUT), 1, 0, 0)
+    end
 end
 
 -- Process any queued messages
@@ -631,7 +840,6 @@ local defaultIgnoreGlobals = {
     "ArkadiusTradeToolsSalesData16",
     "AUI_Main",
     "Azurah",
-    "BRACKET_COMMANDS",
     "BUI",
     "BUI_VARS",
     "ComparativeTooltip1Divider1",
@@ -651,8 +859,6 @@ local defaultIgnoreGlobals = {
     "FTC",
     "FTC_VARS",
     "FyrMM",
-    "g_currentPlayerName",
-    "g_currentPlayerUserId",
     "GameTooltipDivider1",
     "GameTooltipDivider2",
     "GridList",
@@ -663,7 +869,6 @@ local defaultIgnoreGlobals = {
     "InventoryGridView",
     "ITTsGhostwriter",
     "Item Name",
-    "ITEM_TRAIT_TYPE_SPECIAL_STAT",
     "ItemCooldownTrackerOptions",
     "ItemTooltipCondition",
     "ItemTooltipDivider1",
@@ -693,7 +898,6 @@ local defaultIgnoreGlobals = {
     "MM13DataSavedVariables",
     "MM14DataSavedVariables",
     "MM15DataSavedVariables",
-    "NOTIFICATION_ICONS_CONSOLE",
     "originalBonanzaPriceValue",
     "PerfectRoll",
     "pinType_Delve_bosses",
@@ -713,9 +917,7 @@ local defaultIgnoreGlobals = {
     "pinType_Unknown_POI",
     "pinType_Wine_and_Warriors",
     "POC",
-    "PREVIEW_UPDATE_INTERVAL_MS",
     "Price",
-    "PULSES",
     "SkySMapPin_unknown",
     "SkySMapPin_collected",
     "SKYS_TITLE",
@@ -754,9 +956,7 @@ local defaultIgnoreGlobals = {
     "TGT_SettingsHandler",
     "Time",
     "tim99_WitchesFestival",
-    "TUTORIAL_TRIGGER_MOUNT_SET",
     "TweakIt",
-    "WriteToInterfaceLog",
 }
 
 -- SavedVariables - will be populated on addon load
@@ -796,7 +996,7 @@ local ignoreLookup = {}
 local ignoreFunctionLookup = {}
 
 -- Rebuild the lookup table by combining default and user-defined lists
-local function rebuildIgnoreLookup()
+function rebuildIgnoreLookup()
     ignoreLookup = {}
 
     -- Add default ignored globals
@@ -822,7 +1022,7 @@ local function rebuildIgnoreLookup()
 end
 
 -- Rebuild the function lookup table by combining default and user-defined lists
-local function rebuildIgnoreFunctionLookup()
+function rebuildIgnoreFunctionLookup()
     ignoreFunctionLookup = {}
 
     -- Add default ignored function patterns
@@ -848,7 +1048,7 @@ local function rebuildIgnoreFunctionLookup()
 end
 
 -- Add a global to the ignore list
-local function addGlobalToIgnoreList(globalName)
+function addGlobalToIgnoreList(globalName)
     if not globalName or globalName == "" then
         return false, GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_NAME)
     end
@@ -879,7 +1079,7 @@ local function addGlobalToIgnoreList(globalName)
 end
 
 -- Remove a global from the ignore list
-local function removeGlobalFromIgnoreList(globalName)
+function removeGlobalFromIgnoreList(globalName)
     if not globalName or globalName == "" then
         return false, GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_NAME)
     end
@@ -913,7 +1113,7 @@ local function removeGlobalFromIgnoreList(globalName)
 end
 
 -- List ignored globals
-local function listIgnoredGlobals()
+function listIgnoredGlobals()
     if msgwin then
         msgwin:SetHidden(false)
         msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_DEFAULT_GLOBALS), 1, 0.8, 0)
@@ -939,7 +1139,7 @@ local function listIgnoredGlobals()
 end
 
 -- List ignored function patterns
-local function listIgnoredFunctions()
+function listIgnoredFunctions()
     if msgwin then
         msgwin:SetHidden(false)
         msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_DEFAULT_FUNCS), 1, 0.8, 0)
@@ -965,7 +1165,7 @@ local function listIgnoredFunctions()
 end
 
 -- Add a function pattern to the ignore list
-local function addFunctionToIgnoreList(functionPattern)
+function addFunctionToIgnoreList(functionPattern)
     if not functionPattern or functionPattern == "" then
         return false, GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_PATTERN)
     end
@@ -996,7 +1196,7 @@ local function addFunctionToIgnoreList(functionPattern)
 end
 
 -- Remove a function pattern from the ignore list
-local function removeFunctionFromIgnoreList(functionPattern)
+function removeFunctionFromIgnoreList(functionPattern)
     if not functionPattern or functionPattern == "" then
         return false, GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_PATTERN)
     end
@@ -1030,7 +1230,7 @@ local function removeFunctionFromIgnoreList(functionPattern)
 end
 
 -- Show help message
-local function showHelp()
+function showHelp()
     if msgwin then
         msgwin:SetHidden(false)
         msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_HELP_HEADER), 1, 1, 0)
@@ -1046,7 +1246,7 @@ local function showHelp()
 end
 
 -- Display a message both in window and in chat
-local function displayMessage(message, r, g, b)
+function displayMessage(message, r, g, b)
     -- Add to our window if available
     if msgwin then
         msgwin:AddText(message, r, g, b)
@@ -1056,7 +1256,7 @@ local function displayMessage(message, r, g, b)
     CHAT_ROUTER:AddSystemMessage(message)
 end
 
-local function isControlCreation(functionNames)
+function isControlCreation(functionNames)
     for _, funcName in ipairs(functionNames) do
         -- Check against both default and user-defined patterns
         if ignoreFunctionLookup[funcName] then
@@ -1066,7 +1266,7 @@ local function isControlCreation(functionNames)
     return false
 end
 
-local function shouldIgnoreGlobal(key)
+function shouldIgnoreGlobal(key)
     if type(key) ~= "string" then
         return false
     end
@@ -1076,7 +1276,7 @@ end
 --- Handles undefined global variable access
 --- @param _ any
 --- @param key any
-local function globalmiss(_, key)
+function globalmiss(_, key)
     if isNilOrEmpty(key) or reported[key] > CONFIG.MAX_REPORTS or shouldIgnoreGlobal(key) or ignoreLookup[key] then
         return
     end

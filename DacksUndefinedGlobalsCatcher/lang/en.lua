@@ -4,6 +4,17 @@ local strings = {
     -- Window title
     DACKS_UNDEFINED_GLOBALS_CATCHER_WINDOW_TITLE = "Undefined Globals",
 
+    -- Mode
+    DACKS_UNDEFINED_GLOBALS_CATCHER_MODE_GLOBALS = "Globals",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_MODE_FUNCTIONS = "Functions",
+
+    -- Button
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_ADD = "Add",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_REMOVE = "Remove",
+
+    -- Message
+    DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_INPUT = "Please enter a name or pattern first.",
+
     -- Commands
     DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_TOGGLE = "Toggle the undefined globals window",
     DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_LIST = "List all ignored globals",
