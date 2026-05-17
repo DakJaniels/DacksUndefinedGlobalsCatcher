@@ -27,6 +27,7 @@ local LoadString = _G.LoadString
 local ReloadUI = _G.ReloadUI
 local WINDOW_MANAGER = _G.GetWindowManager()
 local ANIMATION_MANAGER = _G.GetAnimationManager()
+local SCENE_MANAGER = _G.SCENE_MANAGER
 
 -- -----------------------------------------------------------------------------
 -- Forwards.
@@ -48,8 +49,6 @@ local getUsableFont
 local isNilOrEmpty
 local prettyPrint
 local formatMessage
-local ShowMsgWin
-local HideMsgWin
 -- -----------------------------------------------------------------------------
 
 if not SLASH_COMMANDS["/rl"] then
@@ -236,26 +235,10 @@ function formatMessage(formatStr, reportedKey, key, traceback, functionNames)
     return (message:gsub("\r\n", "\n")) -- Normalize any Windows line endings, capture only first return value
 end
 
--- Helper functions for showing/hiding the window
----
----@param win Control
-function ShowMsgWin(win)
-    if win then
-        win:SetHidden(false)
-    end
-end
-
----
----@param win Control
-function HideMsgWin(win)
-    if win then
-        win:SetHidden(true)
-    end
-end
--- -----------------------------------------------------------------------------
-
 -- Our message window implementation using ZO_DeferredInitializingObject
 -- -----------------------------------------------------------------------------
+local MESSAGE_WINDOW_SCENE_NAMES = { "hud", "hudui", "gameMenuInGame", "siegeBar", "siegeBarUI" }
+
 --- @class MessageWindow : ZO_DeferredInitializingObject
 local MessageWindow = ZO_DeferredInitializingObject:Subclass()
 
@@ -290,43 +273,47 @@ function MessageWindow:Initialize(name, title, width, height)
     self.control:SetDimensionConstraints(200, 150, maxWidth, maxHeight)
     self.control:SetResizeHandleSize(16)
 
-    -- Create a simple fade fragment for our window to use with ZO_DeferredInitializingObject
-    ZO_DeferredInitializingObject.Initialize(self, ZO_FadeSceneFragment:New(self.control))
+    self.fragment = ZO_SimpleSceneFragment:New(self.control)
+    ZO_DeferredInitializingObject.Initialize(self, self.fragment)
+    self:PerformDeferredInitialize()
 end
 
--- Required implementation for ZO_DeferredInitializingObject
 function MessageWindow:OnDeferredInitialize()
     self:CreateUI()
     self:SetupHandlers()
     self:ProcessQueuedMessages()
-
-    -- Even though ZO_DeferredInitializingObject sets self.initialized internally,
-    -- we'll set it here as a safety measure for our code that checks it
-    self.initialized = true
 end
 
--- Override OnShowing to handle when the fragment is showing
+function MessageWindow:AddFragmentToScenes()
+    for _, sceneName in ipairs(MESSAGE_WINDOW_SCENE_NAMES) do
+        local scene = SCENE_MANAGER:GetScene(sceneName)
+        if scene and not scene:HasFragment(self.fragment) then
+            scene:AddFragment(self.fragment)
+        end
+    end
+end
+
+function MessageWindow:RemoveFragmentFromScenes()
+    for _, sceneName in ipairs(MESSAGE_WINDOW_SCENE_NAMES) do
+        local scene = SCENE_MANAGER:GetScene(sceneName)
+        if scene then
+            scene:RemoveFragment(self.fragment)
+        end
+    end
+end
+
 function MessageWindow:OnShowing()
-    -- Update UI elements when showing
     if self.buffer then
         self:AdjustSlider()
     end
 end
 
--- Override OnHiding to handle when the fragment is hiding
-function MessageWindow:OnHiding()
-    -- Clean up or save state when hiding
-    HideMsgWin(self)
-end
-
--- Override OnShown when fully shown
-function MessageWindow:OnShown()
-    ShowMsgWin(self)
-end
-
--- Override OnHidden when fully hidden
-function MessageWindow:OnHidden()
-    HideMsgWin(self)
+function MessageWindow:Hide()
+    if not self.control then
+        return
+    end
+    self:RemoveFragmentFromScenes()
+    self.control:SetHidden(true)
 end
 
 -- Create all UI elements
@@ -789,35 +776,24 @@ function MessageWindow:ClearText()
     self.buffer:Clear()
 end
 
--- Set the window hidden state
 function MessageWindow:SetHidden(hidden)
-    -- Initialize if showing for the first time
-    if not hidden then
-        -- Ensure initialization has been performed
-        self:PerformDeferredInitialize()
+    if not self.control then
+        return
     end
-
-    -- Directly set the control's hidden state
-    if self.control then
-        self.control:SetHidden(hidden)
+    if hidden then
+        self:Hide()
+        return
     end
+    self.control:SetHidden(false)
+    self:AddFragmentToScenes()
 end
 
--- Toggle the window visibility
 function MessageWindow:Toggle()
-    if self.control then
-        self:SetHidden(self.control:IsControlHidden() == false)
-    end
+    self:SetHidden(self:IsShowing())
 end
 
--- Check if the window is showing
 function MessageWindow:IsShowing()
-    -- Use DeferredInitializingObject's IsShowing if available, otherwise check control
-    if self.fragment then
-        return self.fragment:IsShowing()
-    else
-        return self.control and not self.control:IsControlHidden()
-    end
+    return ZO_DeferredInitializingObject.IsShowing(self)
 end
 
 -- Configuration
@@ -833,6 +809,7 @@ local reported = setmetatable({}, {
     __index = function()
         return 0
     end,
+    __mode = "k",
 })
 local msgwin = nil
 --- @cast msgwin MessageWindow
