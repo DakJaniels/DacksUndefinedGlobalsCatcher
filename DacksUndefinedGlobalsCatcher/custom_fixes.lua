@@ -1,14 +1,14 @@
----@diagnostic disable: lowercase-global, duplicate-set-field, undefined-global
+--- @diagnostic disable: lowercase-global, duplicate-set-field, undefined-global
 
 --[[
     DacksUndefinedGlobalsCatcher - Custom Fixes
-    
+
     This file contains temporary fixes for undefined globals in the ESO UI.
-    
+
     HOW IT WORKS:
     - This prevents "attempt to index nil value" errors for known missing globals
     - Each fix should include the original error context as a comment if known
-    
+
     HOW TO ADD FIXES:
     1. Add the undefined global with its proper value (or a reasonable default)
     2. Include a comment about where/why it's needed
@@ -105,6 +105,7 @@ do
             WriteToInterfaceLog(string.format("%s - %s - %s", ZO_Scene_GetOriginColor():Colorize(GetString("SI_SCENEMANAGERMESSAGEORIGIN", ZO_REMOTE_SCENE_CHANGE_ORIGIN)), self.name, message))
         end
     end
+
     function ZO_SceneManager_Follower:Log(message, sceneName)
         if IsInternalBuild() and g_loggingEnabled and WriteToInterfaceLog then
             if sceneName then
