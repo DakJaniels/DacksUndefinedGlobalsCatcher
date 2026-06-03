@@ -11,6 +11,23 @@ local strings = {
     -- Button
     DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_ADD = "Add",
     DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_REMOVE = "Remove",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_IGNORE_GLOBAL = "Ignore global",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_IGNORE_FUNCTION = "Ignore top function",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_COPY_DETAIL = "Copy",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_COPY_DETAIL_TT = "Show plain detail text and select all; press Ctrl+C to copy (no color codes). Click away to restore colors. You can also hold Ctrl while focused, then Ctrl+C.",
+
+    -- Toolbar / list
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_SEARCH = "Search:",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_SEARCH_TT = "Filter incidents by global name or top stack frame.",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_SEARCH_PLACEHOLDER = "global or frame...",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_CLEAR_TT = "Clear all incidents from the list",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_RESET_TT = "Reset search filter",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_CLOSE_TT = "Close window",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_EMPTY = "Nothing to show",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_CLEAR_DIALOG_TITLE = "Clear incidents",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_CLEAR_DIALOG_TEXT = "Remove all incidents from the list? Report counts are not reset.",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_COUNT_TT = "Reported at lookup count: <<1>>",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT = "Global: <<1>> (type: <<2>>)",
 
     -- Message
     DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_INPUT = "Please enter a name or pattern first.",

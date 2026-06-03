@@ -11,6 +11,19 @@ local strings = {
     -- Button
     DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_ADD = "Añadir",
     DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_REMOVE = "Eliminar",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_IGNORE_GLOBAL = "Ignorar global",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_IGNORE_FUNCTION = "Ignorar función superior",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_SEARCH = "Buscar:",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_SEARCH_TT = "Filtrar por nombre global o marco superior.",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_SEARCH_PLACEHOLDER = "global o marco...",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_CLEAR_TT = "Borrar todos los incidentes",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_RESET_TT = "Restablecer filtro",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_CLOSE_TT = "Cerrar ventana",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_EMPTY = "Nada que mostrar",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_CLEAR_DIALOG_TITLE = "Borrar incidentes",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_CLEAR_DIALOG_TEXT = "¿Eliminar todos los incidentes de la lista? Los contadores no se reinician.",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_COUNT_TT = "Reportado en el recuento: <<1>>",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT = "Global: <<1>> (tipo: <<2>>)",
 
     -- Message
     DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_INPUT = "Por favor, introduce primero un nombre o patrón.",

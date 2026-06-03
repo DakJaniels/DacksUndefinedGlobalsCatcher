@@ -5,15 +5,21 @@
 
 ## Title: DacksUndefinedGlobalsCatcher
 ## Author: @dack_janiels, original by Merlight
-## APIVersion: 101045 101046
-## AddonVersion: 1
-## Version: 1
+## APIVersion: 101049 101050
+## Version: 1.2
+## AddOnVersion: 1
 ## Description: Debugging utility that reports failed _G lookups. It can help you track UI errors like "12345678901234567890:1: attempt to index a nil value"
 ## SavedVariables: DacksUndefinedGlobalsCatcherSavedVars
 
 # Load localization files
-lang/en.lua
+lang/default.lua
 lang/$(language).lua
+
+DacksUndefinedGlobalsCatcher.xml
+UI/UGCTheme.lua
+UI/DetailPane.lua
+UI/IgnoreBar.lua
+UI/IncidentViewer.lua
 
 # Main addon file
 DacksUndefinedGlobalsCatcher.lua

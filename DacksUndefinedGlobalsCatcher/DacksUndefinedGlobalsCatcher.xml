@@ -1,0 +1,273 @@
+<GuiXml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/DakJaniels/esoui_gui_xsd/main/esoui_gui_xml.xsd">
+  <Controls>
+    <Control name="UGCIncidentRow"
+             mouseEnabled="true"
+             virtual="true">
+      <Dimensions y="30" />
+      <OnMouseEnter>self:GetOwningWindow().OnMouseEnterRow(self)</OnMouseEnter>
+      <OnMouseExit>self:GetOwningWindow().OnMouseExitRow(self)</OnMouseExit>
+      <OnMouseUp>self:GetOwningWindow().OnMouseUpRow(self, button, upInside)</OnMouseUp>
+      <Controls>
+        <Texture name="$(parent)BG"
+                 inherits="ZO_ThinListBgStrip" />
+        <Label name="$(parent)Time"
+               font="ZoFontGameSmall"
+               mouseEnabled="true">
+          <Anchor point="LEFT"
+                  offsetX="8" />
+          <Dimensions x="72"
+                      y="30" />
+          <OnMouseEnter>self:GetOwningWindow().OnMouseEnterRow(self)</OnMouseEnter>
+          <OnMouseExit>self:GetOwningWindow().OnMouseExitRow(self)</OnMouseExit>
+          <OnMouseUp>self:GetOwningWindow().OnMouseUpRow(self:GetParent(), button, upInside)</OnMouseUp>
+        </Label>
+        <Label name="$(parent)Count"
+               font="ZoFontGame"
+               mouseEnabled="true">
+          <Anchor point="LEFT"
+                  relativePoint="RIGHT"
+                  relativeTo="$(parent)Time"
+                  offsetX="6" />
+          <Dimensions x="48"
+                      y="30" />
+          <OnMouseEnter>self:GetOwningWindow().OnMouseEnterRow(self)</OnMouseEnter>
+          <OnMouseExit>self:GetOwningWindow().OnMouseExitRow(self)</OnMouseExit>
+          <OnMouseUp>self:GetOwningWindow().OnMouseUpRow(self:GetParent(), button, upInside)</OnMouseUp>
+        </Label>
+        <Label name="$(parent)Global"
+               font="ZoFontGame"
+               mouseEnabled="true">
+          <Anchor point="LEFT"
+                  relativePoint="RIGHT"
+                  relativeTo="$(parent)Count"
+                  offsetX="6" />
+          <Dimensions x="200"
+                      y="30" />
+          <OnMouseEnter>self:GetOwningWindow().OnMouseEnterRow(self)</OnMouseEnter>
+          <OnMouseExit>self:GetOwningWindow().OnMouseExitRow(self)</OnMouseExit>
+          <OnMouseUp>self:GetOwningWindow().OnMouseUpRow(self:GetParent(), button, upInside)</OnMouseUp>
+        </Label>
+        <Label name="$(parent)Frame"
+               font="ZoFontGameSmall"
+               mouseEnabled="true">
+          <Anchor point="LEFT"
+                  relativePoint="RIGHT"
+                  relativeTo="$(parent)Global"
+                  offsetX="6" />
+          <Dimensions x="280"
+                      y="30" />
+          <OnMouseEnter>self:GetOwningWindow().OnMouseEnterRow(self)</OnMouseEnter>
+          <OnMouseExit>self:GetOwningWindow().OnMouseExitRow(self)</OnMouseExit>
+          <OnMouseUp>self:GetOwningWindow().OnMouseUpRow(self:GetParent(), button, upInside)</OnMouseUp>
+        </Label>
+        <Texture name="$(parent)Stack"
+                 textureFile="EsoUI/Art/Housing/Keyboard/furniture_tabIcon_recall_down.dds"
+                 mouseEnabled="true">
+          <Anchor point="LEFT"
+                  relativePoint="RIGHT"
+                  relativeTo="$(parent)Frame"
+                  offsetY="-3" />
+          <Dimensions x="30"
+                      y="30" />
+          <OnMouseEnter>self:GetOwningWindow().OnMouseEnterRow(self)</OnMouseEnter>
+          <OnMouseExit>self:GetOwningWindow().OnMouseExitRow(self)</OnMouseExit>
+          <OnMouseUp>self:GetOwningWindow().OnMouseUpRow(self:GetParent(), button, upInside)</OnMouseUp>
+        </Texture>
+      </Controls>
+    </Control>
+    <TopLevelControl name="DacksUGCMainWindow"
+                     clampedToScreen="true"
+                     mouseEnabled="true"
+                     movable="true"
+                     hidden="true"
+                     resizeHandleSize="8">
+      <Dimensions x="1000"
+                  y="600" />
+      <DimensionConstraints minX="600"
+                            minY="400" />
+      <Anchor point="CENTER" />
+      <OnMoveStop>self.OnMoveStop(...)</OnMoveStop>
+      <OnResizeStop>self.OnResizeStop(...)</OnResizeStop>
+      <Controls>
+        <Backdrop name="$(parent)BG"
+                  inherits="ZO_DefaultBackdrop"
+                  tier="LOW" />
+        <Control name="$(parent)TitleBar">
+          <Anchor point="TOPLEFT" />
+          <Anchor point="TOPRIGHT" />
+          <Dimensions y="36" />
+          <Controls>
+            <Backdrop name="$(parent)Bg"
+                      inherits="ZO_FrameBackdrop"
+                      tier="LOW">
+              <Anchor point="TOPLEFT" />
+              <Anchor point="BOTTOMRIGHT" />
+            </Backdrop>
+            <Label name="$(parent)Title"
+                   font="ZoFontWinH2"
+                   verticalAlignment="CENTER"
+                   horizontalAlignment="CENTER"
+                   mouseEnabled="false">
+              <Anchor point="TOPLEFT" />
+              <Anchor point="BOTTOMRIGHT" />
+            </Label>
+            <Button name="$(parent)Close"
+                    inherits="ZO_CloseButton">
+              <Anchor point="RIGHT"
+                      offsetX="-8" />
+              <OnMouseEnter>self:GetOwningWindow().OnMouseEnter(self)</OnMouseEnter>
+              <OnMouseExit>self:GetOwningWindow().OnMouseExit(self)</OnMouseExit>
+              <OnClicked>self:GetOwningWindow().OnCloseClicked(...)</OnClicked>
+            </Button>
+            <Button name="$(parent)Help"
+                    mouseOverBlendMode="ADD"
+                    inherits="ZO_ButtonBehaviorClickSound">
+              <Dimensions x="28"
+                          y="28" />
+              <Anchor point="RIGHT"
+                      relativeTo="$(parent)Close"
+                      relativePoint="LEFT"
+                      offsetX="2" />
+              <Textures normal="EsoUI/Art/Notifications/notification_help_up.dds"
+                        pressed="EsoUI/Art/Notifications/notification_help_down.dds"
+                        mouseOver="EsoUI/Art/Notifications/notification_help_over.dds" />
+              <OnMouseEnter>self:GetOwningWindow().OnMouseEnter(self)</OnMouseEnter>
+              <OnMouseExit>self:GetOwningWindow().OnMouseExit(self)</OnMouseExit>
+              <OnClicked>self:GetOwningWindow().OnHelpClicked(...)</OnClicked>
+            </Button>
+            <Button name="$(parent)ResetFilters"
+                    mouseOverBlendMode="ADD"
+                    inherits="ZO_ButtonBehaviorClickSound">
+              <Dimensions x="28"
+                          y="28" />
+              <Anchor point="RIGHT"
+                      relativeTo="$(parent)Help"
+                      relativePoint="LEFT"
+                      offsetX="4" />
+              <Textures normal="EsoUI/Art/Help/help_tabIcon_feedback_up.dds"
+                        pressed="EsoUI/Art/Help/help_tabIcon_feedback_down.dds"
+                        mouseOver="EsoUI/Art/Help/help_tabIcon_feedback_over.dds" />
+              <OnMouseEnter>self:GetOwningWindow().OnMouseEnter(self)</OnMouseEnter>
+              <OnMouseExit>self:GetOwningWindow().OnMouseExit(self)</OnMouseExit>
+              <OnClicked>self:GetOwningWindow().OnResetFiltersClicked(...)</OnClicked>
+            </Button>
+          </Controls>
+        </Control>
+        <Control name="$(parent)Toolbar">
+          <Anchor point="TOPLEFT"
+                  relativeTo="$(parent)TitleBar"
+                  relativePoint="BOTTOMLEFT" />
+          <Anchor point="TOPRIGHT"
+                  relativeTo="$(parent)TitleBar"
+                  relativePoint="BOTTOMRIGHT" />
+          <Dimensions y="32" />
+          <Controls>
+            <Backdrop name="$(parent)Bg"
+                      inherits="ZO_FrameBackdrop"
+                      tier="LOW">
+              <Anchor point="TOPLEFT" />
+              <Anchor point="BOTTOMRIGHT" />
+            </Backdrop>
+            <Label name="$(parent)SearchLabel"
+                   font="ZoFontGame"
+                   mouseEnabled="true">
+              <Anchor point="LEFT"
+                      offsetX="12" />
+              <OnMouseEnter>self:GetOwningWindow().OnMouseEnter(self)</OnMouseEnter>
+              <OnMouseExit>self:GetOwningWindow().OnMouseExit(self)</OnMouseExit>
+            </Label>
+            <Backdrop name="$(parent)Search"
+                      tier="HIGH"
+                      inherits="ZO_SingleLineEditBackdrop_Keyboard">
+              <Dimensions x="220" />
+              <Anchor point="LEFT"
+                      relativeTo="$(parent)SearchLabel"
+                      relativePoint="RIGHT"
+                      offsetX="8" />
+              <Controls>
+                <EditBox name="$(parent)Box"
+                         inherits="ZO_DefaultEditForBackdrop" />
+              </Controls>
+            </Backdrop>
+            <Button name="$(parent)ClearIncidents"
+                    mouseOverBlendMode="ADD"
+                    inherits="ZO_ButtonBehaviorClickSound">
+              <Dimensions x="28"
+                          y="28" />
+              <Anchor point="LEFT"
+                      relativeTo="$(parent)Search"
+                      relativePoint="RIGHT"
+                      offsetX="8" />
+              <Textures normal="EsoUI/Art/Buttons/destructive_up.dds"
+                        pressed="EsoUI/Art/Buttons/destructive_down.dds"
+                        mouseOver="EsoUI/Art/Buttons/destructive_over.dds" />
+              <OnMouseEnter>self:GetOwningWindow().OnMouseEnter(self)</OnMouseEnter>
+              <OnMouseExit>self:GetOwningWindow().OnMouseExit(self)</OnMouseExit>
+              <OnClicked>self:GetOwningWindow().OnClearIncidentsClicked(...)</OnClicked>
+            </Button>
+          </Controls>
+        </Control>
+        <Control name="$(parent)IgnoreBar" />
+        <Control name="$(parent)PaneSplitter"
+                 mouseEnabled="true">
+          <Dimensions y="8" />
+          <Anchor point="BOTTOMLEFT"
+                  relativeTo="$(parent)DetailPane"
+                  relativePoint="TOPLEFT"
+                  offsetX="10" />
+          <Anchor point="BOTTOMRIGHT"
+                  relativeTo="$(parent)DetailPane"
+                  relativePoint="TOPRIGHT"
+                  offsetX="-10" />
+          <Controls>
+            <Texture name="$(parent)Grip"
+                     color="FFFFFF"
+                     alpha="0.35">
+              <Anchor point="LEFT"
+                      offsetX="40" />
+              <Anchor point="RIGHT"
+                      offsetX="-40" />
+              <Dimensions y="2" />
+            </Texture>
+          </Controls>
+        </Control>
+        <Control name="$(parent)DetailPane">
+          <Anchor point="BOTTOMLEFT"
+                  offsetX="10"
+                  offsetY="-50" />
+          <Anchor point="BOTTOMRIGHT"
+                  offsetX="-10"
+                  offsetY="-50" />
+        </Control>
+        <Backdrop name="$(parent)ListBg"
+                  inherits="ZO_FrameBackdrop"
+                  tier="LOW">
+          <Anchor point="TOPLEFT"
+                  relativeTo="$(parent)Toolbar"
+                  relativePoint="BOTTOMLEFT"
+                  offsetX="10"
+                  offsetY="8" />
+          <Anchor point="BOTTOMRIGHT"
+                  relativeTo="$(parent)PaneSplitter"
+                  relativePoint="TOPRIGHT"
+                  offsetX="-10"
+                  offsetY="-8" />
+        </Backdrop>
+        <Control name="$(parent)List"
+                 inherits="ZO_ScrollList">
+          <Anchor point="TOPLEFT"
+                  relativeTo="$(parent)Toolbar"
+                  relativePoint="BOTTOMLEFT"
+                  offsetX="10"
+                  offsetY="8" />
+          <Anchor point="BOTTOMRIGHT"
+                  relativeTo="$(parent)PaneSplitter"
+                  relativePoint="TOPRIGHT"
+                  offsetX="-10"
+                  offsetY="-8" />
+        </Control>
+      </Controls>
+    </TopLevelControl>
+  </Controls>
+</GuiXml>

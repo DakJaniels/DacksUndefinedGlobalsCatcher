@@ -25,9 +25,8 @@ local tostring = tostring
 local string_rep = string.rep
 local LoadString = _G.LoadString
 local ReloadUI = _G.ReloadUI
-local WINDOW_MANAGER = _G.GetWindowManager()
-local ANIMATION_MANAGER = _G.GetAnimationManager()
-local SCENE_MANAGER = _G.SCENE_MANAGER
+
+DacksUGC = DacksUGC or {}
 
 -- -----------------------------------------------------------------------------
 -- Forwards.
@@ -49,33 +48,27 @@ local getUsableFont
 local isNilOrEmpty
 local prettyPrint
 local formatMessage
--- -----------------------------------------------------------------------------
 
-if not SLASH_COMMANDS["/rl"] then
-    SLASH_COMMANDS["/rl"] = function()
-        ReloadUI("ingame")
-    end
-end
 -- -----------------------------------------------------------------------------
 -- Utility Functions.
 -- -----------------------------------------------------------------------------
 
 ---
----@param font? string
----@return string
+--- @param font? string
+--- @return string
 function getUsableFont(font)
-    font = font or ""
-    if IsInGamepadPreferredMode() or IsConsoleUI() then
-        font = "$(GAMEPAD_MEDIUM_FONT)|$(GP_18)|soft-shadow-thick"
-    else
-        font = "$(BOLD_FONT)|$(KB_18)|soft-shadow-thin"
+    if DacksUGC and DacksUGC.Theme then
+        return DacksUGC.Theme.GetBodyFont()
     end
-    return font
+    if IsInGamepadPreferredMode() or IsConsoleUI() then
+        return "$(GAMEPAD_MEDIUM_FONT)|$(GP_18)|soft-shadow-thick"
+    end
+    return "ZoFontGame"
 end
 
----@generic T
----@param value T
----@return boolean
+--- @generic T
+--- @param value T
+--- @return boolean
 function isNilOrEmpty(value)
     return value == nil or (type(value) == "string" and value == "")
 end
@@ -110,7 +103,7 @@ function prettyPrint(value, indent, done)
     for k in pairs(value) do
         table_insert(keys, k)
     end
-    table_sort(keys, function(a, b)
+    table_sort(keys, function (a, b)
         return tostring(a) < tostring(b)
     end)
 
@@ -171,7 +164,8 @@ function formatMessage(formatStr, reportedKey, key, traceback, functionNames)
             color = "|cFFCC99"
         end
 
-        table_insert(callStackInfo, string_format("  %2d. %s%s|r", i, color, functionName))
+        local safeName = EscapeMarkup(functionName, ALLOW_MARKUP_TYPE_COLOR_ONLY)
+        table_insert(callStackInfo, string_format("  %2d. %s%s|r", i, color, safeName))
     end
 
     -- Extract locals from traceback if present
@@ -189,17 +183,17 @@ function formatMessage(formatStr, reportedKey, key, traceback, functionNames)
         locals = locals:gsub("=%s*{%s*}", "= {}") -- Handle empty tables
 
         -- Clean up the locals string to make it valid Lua
-        locals = locals:gsub("=%s*{([^}]+)}", function(content)
+        locals = locals:gsub("=%s*{([^}]+)}", function (content)
             -- Format table contents properly
             local cleaned = content
-                :gsub("%s+", " ") -- Normalize whitespace
+                :gsub("%s+", " ")                           -- Normalize whitespace
                 :gsub("([%w_]+)%s*=%s*([^,}]+)", "%1 = %2") -- Fix key-value pairs
-                :gsub(",%s*}", "}") -- Remove trailing commas
+                :gsub(",%s*}", "}")                         -- Remove trailing commas
             return "= {" .. cleaned .. "}"
         end)
 
         -- Add quotes around string keys if needed
-        locals = locals:gsub("([%w_]+)%s*=", function(keyName)
+        locals = locals:gsub("([%w_]+)%s*=", function (keyName)
             -- Don't quote 'self' as it's a special case
             if keyName == "self" then
                 return keyName .. " ="
@@ -235,569 +229,18 @@ function formatMessage(formatStr, reportedKey, key, traceback, functionNames)
     return (message:gsub("\r\n", "\n")) -- Normalize any Windows line endings, capture only first return value
 end
 
--- Our message window implementation using ZO_DeferredInitializingObject
--- -----------------------------------------------------------------------------
-local MESSAGE_WINDOW_SCENE_NAMES = { "hud", "hudui", "gameMenuInGame", "siegeBar", "siegeBarUI" }
-
---- @class MessageWindow : ZO_DeferredInitializingObject
-local MessageWindow = ZO_DeferredInitializingObject:Subclass()
-
--- Create a new instance of MessageWindow with provided parameters
-function MessageWindow:New(name, title, width, height)
-    local window = ZO_DeferredInitializingObject.New(self)
-    window:Initialize(name, title, width, height)
-    return window
-end
-
-function MessageWindow:Initialize(name, title, width, height)
-    -- Store parameters for later use
-    self.name = name
-    self.title = title
-    self.width = width or 1024
-    self.height = height or 768
-    self.messageQueue = {}
-
-    -- Create main window with minimal setup
-    self.control = WINDOW_MANAGER:CreateTopLevelWindow(name)
-    self.control:SetDrawLayer(DL_CONTROLS)
-    self.control:SetDrawTier(DT_HIGH)
-    self.control:SetDrawLevel(42)
-    self.control:SetMouseEnabled(true)
-    self.control:SetMovable(true)
-    self.control:SetHidden(true)
-    self.control:SetClampedToScreen(true)
-    self.control:SetDimensions(self.width, self.height)
-    self.control:SetClampedToScreenInsets(-24, 0, 0, 0)
-    self.control:SetAnchor(TOPLEFT, GuiRoot, TOPLEFT, 50, 50)
-    local maxWidth, maxHeight = GuiRoot:GetDimensions()
-    self.control:SetDimensionConstraints(200, 150, maxWidth, maxHeight)
-    self.control:SetResizeHandleSize(16)
-
-    self.fragment = ZO_SimpleSceneFragment:New(self.control)
-    ZO_DeferredInitializingObject.Initialize(self, self.fragment)
-    self:PerformDeferredInitialize()
-end
-
-function MessageWindow:OnDeferredInitialize()
-    self:CreateUI()
-    self:SetupHandlers()
-    self:ProcessQueuedMessages()
-end
-
-function MessageWindow:AddFragmentToScenes()
-    for _, sceneName in ipairs(MESSAGE_WINDOW_SCENE_NAMES) do
-        local scene = SCENE_MANAGER:GetScene(sceneName)
-        if scene and not scene:HasFragment(self.fragment) then
-            scene:AddFragment(self.fragment)
-        end
+--- Removes ESO color markup (|cRRGGBB and |r) for clipboard/plain display. Not EscapeMarkup (that escapes literal markup in user text).
+function DacksUGC.StripColorMarkup(text)
+    if not text or text == "" then
+        return ""
     end
-end
-
-function MessageWindow:RemoveFragmentFromScenes()
-    for _, sceneName in ipairs(MESSAGE_WINDOW_SCENE_NAMES) do
-        local scene = SCENE_MANAGER:GetScene(sceneName)
-        if scene then
-            scene:RemoveFragment(self.fragment)
-        end
-    end
-end
-
-function MessageWindow:OnShowing()
-    if self.buffer then
-        self:AdjustSlider()
-    end
-end
-
-function MessageWindow:Hide()
-    if not self.control then
-        return
-    end
-    self:RemoveFragmentFromScenes()
-    self.control:SetHidden(true)
-end
-
--- Create all UI elements
-function MessageWindow:CreateUI()
-    local maxWidth, maxHeight = GuiRoot:GetDimensions()
-    local font = getUsableFont()
-    -- Create window background
-    self.bg = WINDOW_MANAGER:CreateControl(self.name .. "Bg", self.control, CT_BACKDROP)
-    self.bg:SetAnchor(TOPLEFT, self.control, TOPLEFT, -8, -6)
-    self.bg:SetAnchor(BOTTOMRIGHT, self.control, BOTTOMRIGHT, 4, 4)
-    self.bg:SetEdgeTexture("EsoUI/Art/ChatWindow/chatwindowbg_edge.dds", 256, 256, 32, 0)
-    self.bg:SetCenterTexture("EsoUI/Art/ChatWindow/chatwindowbg_center.dds")
-    self.bg:SetInsets(32, 32, -32, -32)
-    self.bg:SetDimensionConstraints(200, 150, maxWidth, maxHeight)
-    -- Make background completely opaque
-    self.bg:SetAlpha(1.0)
-
-    -- Create header backdrop for title bar
-    self.headerBg = WINDOW_MANAGER:CreateControl(self.name .. "HeaderBg", self.control, CT_BACKDROP)
-    self.headerBg:SetAnchor(TOPLEFT, self.control, TOPLEFT, 0, -5)
-    self.headerBg:SetAnchor(TOPRIGHT, self.control, TOPRIGHT, 0, 40)
-    self.headerBg:SetCenterColor(0.1, 0.1, 0.15, 1.0) -- Dark blue-gray color
-    self.headerBg:SetEdgeColor(0.3, 0.3, 0.4, 1.0)
-    self.headerBg:SetAlpha(0)
-
-    -- Create a solid backdrop for better text contrast - completely opaque
-    self.bgSolid = WINDOW_MANAGER:CreateControl(self.name .. "BgSolid", self.control, CT_BACKDROP)
-    self.bgSolid:SetAnchor(TOPLEFT, self.control, TOPLEFT, 10, 40)
-    self.bgSolid:SetAnchor(BOTTOMRIGHT, self.control, BOTTOMRIGHT, -10, -10)
-    self.bgSolid:SetCenterColor(0.05, 0.05, 0.05, 0.85) -- Completely black with no transparency
-    self.bgSolid:SetEdgeColor(0.1, 0.1, 0.2, 0.5) -- Subtle edge
-
-    -- Create improved divider
-    self.divider = WINDOW_MANAGER:CreateControl(self.name .. "Divider", self.control, CT_TEXTURE)
-    self.divider:SetDimensions(4, 2)
-    self.divider:SetAnchor(TOPLEFT, self.control, TOPLEFT, 10, 40)
-    self.divider:SetAnchor(TOPRIGHT, self.control, TOPRIGHT, -10, 40)
-    self.divider:SetTexture("EsoUI/Art/Miscellaneous/horizontalDivider.dds")
-    self.divider:SetTextureCoords(0.181640625, 0.818359375, 0, 1)
-    self.divider:SetColor(0.6, 0.6, 0.8, 1) -- Lighter color for better visibility
-
-    -- Create text buffer with improved spacing
-    self.buffer = WINDOW_MANAGER:CreateControl(self.name .. "Buffer", self.control, CT_TEXTBUFFER)
-    self.buffer:SetFont(font)
-    self.buffer:SetMaxHistoryLines(200)
-    self.buffer:SetMouseEnabled(true)
-    self.buffer:SetLinkEnabled(true)
-    self.buffer:SetAnchor(TOPLEFT, self.control, TOPLEFT, 20, 45) -- Adjusted to be below divider
-    self.buffer:SetAnchor(BOTTOMRIGHT, self.control, BOTTOMRIGHT, -35, -20)
-    self.buffer:SetLineFade(0, 0)
-    self.buffer:SetHandler("OnLinkMouseUp", function(self, linkText, link, button)
-        ZO_LinkHandler_OnLinkMouseUp(link, button, self)
-    end)
-    self.buffer:SetDimensionConstraints(200 - 55, 150 - 62, maxWidth, maxHeight)
-
-    -- Create slider with improved positioning
-    self.slider = WINDOW_MANAGER:CreateControl(self.name .. "Slider", self.control, CT_SLIDER)
-    self.slider:SetDimensions(15, 32)
-    self.slider:SetAnchor(TOPRIGHT, self.control, TOPRIGHT, -25, 60)
-    self.slider:SetAnchor(BOTTOMRIGHT, self.control, BOTTOMRIGHT, -15, -40)
-    self.slider:SetMinMax(1, 1)
-    self.slider:SetMouseEnabled(true)
-    self.slider:SetValueStep(1)
-    self.slider:SetValue(1)
-    self.slider:SetHidden(true)
-    self.slider:SetThumbTexture("EsoUI/Art/ChatWindow/chat_thumb.dds", "EsoUI/Art/ChatWindow/chat_thumb_disabled.dds", nil, 8, 22, nil, nil, 0.6875, nil)
-    self.slider:SetBackgroundMiddleTexture("EsoUI/Art/ChatWindow/chat_scrollbar_track.dds", 0, 0, 0, 0)
-
-    -- Create scroll buttons
-    self.scrollUp = WINDOW_MANAGER:CreateControlFromVirtual(self.name .. "SliderScrollUp", self.slider, "ZO_ScrollUpButton")
-    self.scrollUp:SetAnchor(BOTTOM, self.slider, TOP, -1, 0)
-    self.scrollUp:SetNormalTexture("EsoUI/Art/ChatWindow/chat_scrollbar_upArrow_up.dds")
-    self.scrollUp:SetPressedTexture("EsoUI/Art/ChatWindow/chat_scrollbar_upArrow_down.dds")
-    self.scrollUp:SetMouseOverTexture("EsoUI/Art/ChatWindow/chat_scrollbar_upArrow_over.dds")
-    self.scrollUp:SetDisabledTexture("EsoUI/Art/ChatWindow/chat_scrollbar_upArrow_disabled.dds")
-
-    self.scrollDown = WINDOW_MANAGER:CreateControlFromVirtual(self.name .. "SliderScrollDown", self.slider, "ZO_ScrollDownButton")
-    self.scrollDown:SetAnchor(TOP, self.slider, BOTTOM, -1, 0)
-    self.scrollDown:SetNormalTexture("EsoUI/Art/ChatWindow/chat_scrollbar_downArrow_up.dds")
-    self.scrollDown:SetPressedTexture("EsoUI/Art/ChatWindow/chat_scrollbar_downArrow_down.dds")
-    self.scrollDown:SetMouseOverTexture("EsoUI/Art/ChatWindow/chat_scrollbar_downArrow_over.dds")
-    self.scrollDown:SetDisabledTexture("EsoUI/Art/ChatWindow/chat_scrollbar_downArrow_disabled.dds")
-
-    self.scrollEnd = WINDOW_MANAGER:CreateControlFromVirtual(self.name .. "SliderScrollEnd", self.slider, "ZO_ScrollEndButton")
-    self.scrollEnd:SetDimensions(16, 16)
-    self.scrollEnd:SetAnchor(TOP, self.scrollDown, BOTTOM, 0, 0)
-
-    -- Create close button with improved positioning
-    self.closeButton = WINDOW_MANAGER:CreateControl(self.name .. "Close", self.control, CT_BUTTON)
-    self.closeButton:SetDimensions(32, 32)
-    self.closeButton:SetAnchor(TOPRIGHT, self.control, TOPRIGHT, -5, 5)
-    self.closeButton:SetNormalTexture("EsoUI/Art/Buttons/closebutton_up.dds")
-    self.closeButton:SetPressedTexture("EsoUI/Art/Buttons/closebutton_down.dds")
-    self.closeButton:SetMouseOverTexture("EsoUI/Art/Buttons/closebutton_mouseover.dds")
-    self.closeButton:SetDisabledTexture("EsoUI/Art/Buttons/closebutton_disabled.dds")
-
-    -- Add resize grip in bottom right corner
-    self.resizeGrip = WINDOW_MANAGER:CreateControl(self.name .. "ResizeGrip", self.control, CT_TEXTURE)
-    self.resizeGrip:SetDimensions(24, 24)
-    self.resizeGrip:SetAnchor(BOTTOMRIGHT, self.control, BOTTOMRIGHT, -2, -2)
-    self.resizeGrip:SetTexture("EsoUI/Art/Miscellaneous/cornerDecoration.dds")
-    self.resizeGrip:SetTextureCoords(0, 1, 0, 1)
-    self.resizeGrip:SetColor(0.7, 0.7, 0.9, 0.8)
-    self.resizeGrip:SetDrawLevel(10) -- Make sure it's on top
-
-    -- Create title label with improved styling
-    if self.title and self.title ~= "" then
-        self.label = WINDOW_MANAGER:CreateControl(self.name .. "Label", self.control, CT_LABEL)
-        self.label:SetText(self.title)
-        self.label:SetFont(font)
-        self.label:SetColor(1, 0.9, 0.6, 1) -- Gold-ish color for title
-        self.label:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
-        local textHeight = self.label:GetTextHeight()
-        self.label:SetDimensionConstraints(200 - 60, textHeight, nil, textHeight)
-        self.label:ClearAnchors()
-        self.label:SetAnchor(TOPLEFT, self.control, TOPLEFT, 30, (40 - textHeight) / 2 + 5)
-        self.label:SetAnchor(TOPRIGHT, self.control, TOPRIGHT, -40, (40 - textHeight) / 2 + 5)
-    end
-
-    -- Set up resize behavior to ensure text buffer adjusts correctly when resized
-    self.control:SetHandler("OnResized", function()
-        self:AdjustSlider()
-    end)
-
-    -- Create the panel container
-    self.managePanel = WINDOW_MANAGER:CreateControl(self.name .. "ManagePanel", self.control, CT_CONTROL)
-    self.managePanel:SetDimensions(self.width - 40, 36)
-    self.managePanel:SetAnchor(BOTTOMLEFT, self.control, BOTTOMLEFT, 20, -20)
-    self.managePanel:SetAnchor(BOTTOMRIGHT, self.control, BOTTOMRIGHT, -40, -20)
-
-    -- Create panel backdrop
-    local panelBg = WINDOW_MANAGER:CreateControl(self.name .. "ManagePanelBg", self.managePanel, CT_BACKDROP)
-    panelBg:SetAnchorFill(self.managePanel)
-    panelBg:SetCenterColor(0.1, 0.1, 0.15, 0.85)
-    panelBg:SetEdgeColor(0.3, 0.3, 0.4, 0.5)
-    panelBg:SetPixelRoundingEnabled(true)
-
-    -- Create mode toggle button (similar to the Button in XML)
-    self.modeButton = WINDOW_MANAGER:CreateControl(self.name .. "ModeButton", self.managePanel, CT_BUTTON)
-    self.modeButton:SetDimensions(28, 28)
-    self.modeButton:SetAnchor(LEFT, self.managePanel, LEFT, 1, 0)
-    self.modeButton:SetNormalTexture("EsoUI/Art/LFG/LFG_tabIcon_groupTools_up.dds")
-    self.modeButton:SetPressedTexture("EsoUI/Art/LFG/LFG_tabIcon_groupTools_down.dds")
-    self.modeButton:SetMouseOverTexture("EsoUI/Art/LFG/LFG_tabIcon_groupTools_over.dds")
-
-    -- Create mode label button (similar to ModeButton in XML)
-    self.modeLabelButton = WINDOW_MANAGER:CreateControl(self.name .. "ModeLabelButton", self.managePanel, CT_BUTTON)
-    self.modeLabelButton:SetDimensions(90, 20)
-    self.modeLabelButton:SetAnchor(LEFT, self.modeButton, RIGHT, 4, 0)
-    self.modeLabelButton:SetFont(font)
-    self.modeLabelButton:SetNormalFontColor(0.9, 0.9, 0.9, 1)
-    self.modeLabelButton:SetMouseOverFontColor(1, 1, 0.8, 1)
-    self.modeLabelButton:SetText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MODE_GLOBALS))
-
-    -- Create button background
-    local buttonBg = WINDOW_MANAGER:CreateControl(self.name .. "ButtonBg", self.managePanel, CT_TEXTURE)
-    buttonBg:SetAnchor(TOPLEFT, self.managePanel, TOPLEFT, 1, 1)
-    buttonBg:SetAnchor(BOTTOMRIGHT, self.modeLabelButton, BOTTOMRIGHT, 1, 0)
-    buttonBg:SetColor(0.2, 0.2, 0.6, 0.2)
-
-    -- Create action buttons container (like ComboBox but we'll use buttons)
-    local actionButtonsContainer = WINDOW_MANAGER:CreateControl(self.name .. "ActionButtons", self.managePanel, CT_CONTROL)
-    actionButtonsContainer:SetDimensions(180, 22)
-    actionButtonsContainer:SetAnchor(RIGHT, self.managePanel, RIGHT, -4, 0)
-
-    -- Create the help button (new addition)
-    self.helpButton = WINDOW_MANAGER:CreateControl(self.name .. "HelpButton", self.managePanel, CT_BUTTON)
-    self.helpButton:SetDimensions(22, 22)
-    self.helpButton:SetAnchor(RIGHT, actionButtonsContainer, LEFT, -8, 0)
-    self.helpButton:SetNormalTexture("EsoUI/Art/Notifications/notification_help_up.dds")
-    self.helpButton:SetPressedTexture("EsoUI/Art/Notifications/notification_help_down.dds")
-    self.helpButton:SetMouseOverTexture("EsoUI/Art/Notifications/notification_help_over.dds")
-
-    -- Create the help button's backdrop for styling
-    local helpButtonBg = WINDOW_MANAGER:CreateControl(self.name .. "HelpButtonBg", self.helpButton, CT_BACKDROP)
-    helpButtonBg:SetAnchorFill(self.helpButton)
-    helpButtonBg:SetCenterColor(0.2, 0.2, 0.5, 0.5)
-    helpButtonBg:SetEdgeColor(0.4, 0.4, 0.8, 0.5)
-
-    -- Create the add button
-    self.addButton = WINDOW_MANAGER:CreateControl(self.name .. "AddButton", actionButtonsContainer, CT_BUTTON)
-    self.addButton:SetDimensions(80, 22)
-    self.addButton:SetAnchor(LEFT, actionButtonsContainer, LEFT, 0, 0)
-    self.addButton:SetFont(font)
-    self.addButton:SetNormalFontColor(0.9, 0.9, 0.9, 1)
-    self.addButton:SetMouseOverFontColor(1, 1, 0.8, 1)
-    self.addButton:SetText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_ADD))
-
-    -- Create add button backdrop
-    local addButtonBg = WINDOW_MANAGER:CreateControl(self.name .. "AddButtonBg", self.addButton, CT_BACKDROP)
-    addButtonBg:SetAnchorFill(self.addButton)
-    addButtonBg:SetCenterColor(0.2, 0.5, 0.2, 0.85)
-    addButtonBg:SetEdgeColor(0.3, 0.7, 0.3, 0.5)
-
-    -- Create the remove button
-    self.removeButton = WINDOW_MANAGER:CreateControl(self.name .. "RemoveButton", actionButtonsContainer, CT_BUTTON)
-    self.removeButton:SetDimensions(80, 22)
-    self.removeButton:SetAnchor(RIGHT, actionButtonsContainer, RIGHT, 0, 0)
-    self.removeButton:SetFont(font)
-    self.removeButton:SetNormalFontColor(0.9, 0.9, 0.9, 1)
-    self.removeButton:SetMouseOverFontColor(1, 0.8, 0.8, 1)
-    self.removeButton:SetText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_REMOVE))
-
-    -- Create remove button backdrop
-    local removeButtonBg = WINDOW_MANAGER:CreateControl(self.name .. "RemoveButtonBg", self.removeButton, CT_BACKDROP)
-    removeButtonBg:SetAnchorFill(self.removeButton)
-    removeButtonBg:SetCenterColor(0.5, 0.2, 0.2, 0.85)
-    removeButtonBg:SetEdgeColor(0.7, 0.3, 0.3, 0.5)
-
-    -- Create the edit box
-    self.editBox = WINDOW_MANAGER:CreateControl(self.name .. "EditBox", self.managePanel, CT_EDITBOX)
-    self.editBox:SetMouseEnabled(true)
-    self.editBox:SetDrawLayer(DL_CONTROLS)
-    self.editBox:SetDrawTier(DT_HIGH)
-    self.editBox:SetDrawLevel(42)
-    self.editBox:SetFont(font)
-    self.editBox:SetAnchor(LEFT, self.modeLabelButton, RIGHT, 8, 0)
-    self.editBox:SetAnchor(RIGHT, actionButtonsContainer, LEFT, -40, 0)
-    self.editBox:SetDimensions(0, 20) -- Width will be determined by anchors
-    self.editBox:SetMaxInputChars(100)
-
-    -- Create edit box backdrop
-    local editBg = WINDOW_MANAGER:CreateControl(self.name .. "EditBg", self.editBox, CT_BACKDROP)
-    editBg:SetAnchorFill(self.editBox)
-    editBg:SetCenterColor(0, 0, 0, 0.5)
-    editBg:SetEdgeColor(0.5, 0.5, 0.5, 0.5)
-
-    -- Set up the edit box
-    self.editBox:SetEditEnabled(true) -- Enable editing
-    self.editBox:SetSelectAllOnFocus(true) -- Select all text on focus
-    self.editBox:SetNewLineEnabled(false) -- Disable new lines if you want single-line input
-    self.editBox:SetPasteEnabled(true) -- Allow pasting text
-
-    -- Add event handlers for the edit box
-    self.editBox:SetHandler("OnEnter", function()
-        self:AddCurrentItem() -- Call the function to add the item when Enter is pressed
-    end)
-
-    self.editBox:SetHandler("OnMouseDown", function()
-        if not self.editBox:HasFocus() then
-            self.editBox:TakeFocus() -- Make the edit box focusable
-        end
-    end)
-
-    self.editBox:SetHandler("OnFocusLost", function()
-        self.editBox:LoseFocus()
-    end)
-
-    self.editBox:SetHandler("OnTextChanged", function()
-        -- Handle text changes if needed
-    end)
-
-    -- Make mode selector clickable to toggle between globals and functions
-    self.modeButton:SetHandler("OnClicked", function()
-        self:ToggleMode()
-    end)
-
-    self.modeLabelButton:SetHandler("OnClicked", function()
-        self:ToggleMode()
-    end)
-
-    self.currentMode = "globals" -- Default mode is globals
-
-    -- Add handlers for the buttons
-    self.addButton:SetHandler("OnClicked", function()
-        self:AddCurrentItem()
-    end)
-
-    self.removeButton:SetHandler("OnClicked", function()
-        self:RemoveCurrentItem()
-    end)
-
-    -- Add handler for the help button
-    self.helpButton:SetHandler("OnClicked", function()
-        showHelp()
-    end)
-
-    -- Make the buffer a bit smaller to make room for our panel
-    self.buffer:ClearAnchors()
-    self.buffer:SetAnchor(TOPLEFT, self.control, TOPLEFT, 20, 45)
-    self.buffer:SetAnchor(BOTTOMRIGHT, self.control, BOTTOMRIGHT, -35, -60)
-
-    -- Adjust slider too
-    self.slider:ClearAnchors()
-    self.slider:SetAnchor(TOPRIGHT, self.control, TOPRIGHT, -25, 60)
-    self.slider:SetAnchor(BOTTOMRIGHT, self.control, BOTTOMRIGHT, -15, -60)
-end
-
--- Toggle between globals and functions mode
-function MessageWindow:ToggleMode()
-    if self.currentMode == "globals" then
-        self.currentMode = "functions"
-        self.modeLabelButton:SetText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MODE_FUNCTIONS))
-    else
-        self.currentMode = "globals"
-        self.modeLabelButton:SetText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MODE_GLOBALS))
-    end
-end
-
--- Add the current item from the edit box
-function MessageWindow:AddCurrentItem()
-    local text = self.editBox:GetText()
-    if text and text ~= "" then
-        local success, message
-
-        if self.currentMode == "globals" then
-            success, message = addGlobalToIgnoreList(text)
-        else
-            success, message = addFunctionToIgnoreList(text)
-        end
-
-        displayMessage(message, success and 0 or 1, success and 1 or 0, 0)
-
-        if success then
-            self.editBox:SetText("")
-        end
-    else
-        displayMessage(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_INPUT), 1, 0, 0)
-    end
-end
-
--- Remove the current item from the edit box
-function MessageWindow:RemoveCurrentItem()
-    local text = self.editBox:GetText()
-    if text and text ~= "" then
-        local success, message
-
-        if self.currentMode == "globals" then
-            success, message = removeGlobalFromIgnoreList(text)
-        else
-            success, message = removeFunctionFromIgnoreList(text)
-        end
-
-        displayMessage(message, success and 0 or 1, success and 1 or 0, 0)
-
-        if success then
-            self.editBox:SetText("")
-        end
-    else
-        displayMessage(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_INPUT), 1, 0, 0)
-    end
-end
-
--- Process any queued messages
-function MessageWindow:ProcessQueuedMessages()
-    if #self.messageQueue > 0 then
-        for _, msgData in ipairs(self.messageQueue) do
-            self.buffer:AddMessage(msgData.message, msgData.r, msgData.g, msgData.b, nil)
-        end
-        self:AdjustSlider()
-        self.messageQueue = {}
-    end
-end
-
--- Set up all the event handlers
-function MessageWindow:SetupHandlers()
-    local buffer = self.buffer
-    local slider = self.slider
-    local control = self.control
-
-    -- Mouse wheel scrolling
-    buffer:SetHandler("OnMouseWheel", function(_, delta, ctrl, alt, shift)
-        local offset = delta
-        if shift then
-            offset = offset * buffer:GetNumVisibleLines()
-        elseif ctrl then
-            offset = offset * buffer:GetNumHistoryLines()
-        end
-        buffer:SetScrollPosition(buffer:GetScrollPosition() + offset)
-        slider:SetValue(slider:GetValue() - offset)
-    end)
-
-    -- Slider value changed
-    slider:SetHandler("OnValueChanged", function(_, value, eventReason)
-        local numHistoryLines = buffer:GetNumHistoryLines()
-        if eventReason == EVENT_REASON_HARDWARE then
-            buffer:SetScrollPosition(numHistoryLines - value)
-        end
-    end)
-
-    -- Scroll buttons
-    self.scrollUp:SetHandler("OnMouseDown", function()
-        buffer:SetScrollPosition(buffer:GetScrollPosition() + 1)
-        slider:SetValue(slider:GetValue() - 1)
-    end)
-
-    self.scrollDown:SetHandler("OnMouseDown", function()
-        buffer:SetScrollPosition(buffer:GetScrollPosition() - 1)
-        slider:SetValue(slider:GetValue() + 1)
-    end)
-
-    self.scrollEnd:SetHandler("OnMouseDown", function()
-        buffer:SetScrollPosition(0)
-        slider:SetValue(buffer:GetNumHistoryLines())
-    end)
-
-    -- Close button
-    self.closeButton:SetHandler("OnClicked", function()
-        self:SetHidden(true)
-    end)
-end
-
--- Adjust the slider based on the current buffer state
-function MessageWindow:AdjustSlider()
-    if not self.buffer or not self.slider then
-        return
-    end
-
-    local numHistoryLines = self.buffer:GetNumHistoryLines()
-    local numVisHistoryLines = self.buffer:GetNumVisibleLines()
-    local sliderMin, sliderMax = self.slider:GetMinMax()
-    local sliderValue = self.slider:GetValue()
-
-    self.slider:SetMinMax(sliderMin or 0, numHistoryLines)
-
-    -- If the slider's at the bottom, stay at the bottom to show new text
-    if sliderValue == sliderMax then
-        self.slider:SetValue(numHistoryLines)
-        -- If the buffer is full start moving the slider up
-    elseif numHistoryLines == self.buffer:GetMaxHistoryLines() then
-        self.slider:SetValue(sliderValue - 1)
-    end
-
-    -- If there are more history lines than visible lines show the slider
-    if numHistoryLines > numVisHistoryLines then
-        self.slider:SetHidden(false)
-    else
-        self.slider:SetHidden(true)
-    end
-end
-
--- Add text to the buffer
-function MessageWindow:AddText(message, red, green, blue)
-    -- Don't process nil messages
-    if not message then
-        return
-    end
-
-    -- Queue messages if we're not initialized yet
-    if not self.buffer then
-        table_insert(self.messageQueue, { message = message, r = red or 1, g = green or 1, b = blue or 1 })
-        return
-    end
-
-    local r = red or 1
-    local g = green or 1
-    local b = blue or 1
-
-    self.buffer:AddMessage(message, r, g, b, nil)
-    self:AdjustSlider()
-end
-
--- Clear the buffer
-function MessageWindow:ClearText()
-    if not self.buffer then
-        self.messageQueue = {}
-        return
-    end
-
-    self.buffer:Clear()
-end
-
-function MessageWindow:SetHidden(hidden)
-    if not self.control then
-        return
-    end
-    if hidden then
-        self:Hide()
-        return
-    end
-    self.control:SetHidden(false)
-    self:AddFragmentToScenes()
-end
-
-function MessageWindow:Toggle()
-    self:SetHidden(self:IsShowing())
-end
-
-function MessageWindow:IsShowing()
-    return ZO_DeferredInitializingObject.IsShowing(self)
+    text = text:gsub("|c%x%x%x%x%x%x", "")
+    return text:gsub("|r", "")
 end
 
 -- Configuration
-local CONFIG = {
+local CONFIG =
+{
     WINDOW_WIDTH = 1000,
     WINDOW_HEIGHT = 600,
     EPSILON = 1e-6,
@@ -805,17 +248,18 @@ local CONFIG = {
 }
 
 -- State management
-local reported = setmetatable({}, {
-    __index = function()
-        return 0
-    end,
-    __mode = "k",
-})
-local msgwin = nil
---- @cast msgwin MessageWindow
+local reported = setmetatable({},
+                              {
+                                  __index = function ()
+                                      return 0
+                                  end,
+                                  __mode = "k",
+                              })
+local viewer = nil
 
 -- Default ignore globals that are static - these won't be saved but always included
-local defaultIgnoreGlobals = {
+local defaultIgnoreGlobals =
+{
     "ADCUI",
     "ActionButton1Decoration",
     "ActionButton2Decoration",
@@ -983,13 +427,15 @@ local defaultIgnoreGlobals = {
 }
 
 -- SavedVariables - will be populated on addon load
-local SavedVars = {
-    userIgnoreGlobals = {}, -- User-defined ignore list
+local SavedVars =
+{
+    userIgnoreGlobals = {},   -- User-defined ignore list
     userIgnoreFunctions = {}, -- User-defined function patterns to ignore
 }
 
 -- Default function patterns that are static - these won't be saved but always included
-local defaultIgnoreFunctions = {
+local defaultIgnoreFunctions =
+{
     "CreateControl",
     "GetNamedChild",
     "CreateControlFromVirtual",
@@ -1034,14 +480,11 @@ function rebuildIgnoreLookup()
         end
     end
 
-    -- Log the result if window is available
-    if msgwin then
-        local userCount = 0
-        if SavedVars and SavedVars.userIgnoreGlobals then
-            userCount = #SavedVars.userIgnoreGlobals
-        end
-        msgwin:AddText(string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_UPDATE_IGNORE_LIST), #defaultIgnoreGlobals, userCount), 0, 1, 0)
+    local userCount = 0
+    if SavedVars and SavedVars.userIgnoreGlobals then
+        userCount = #SavedVars.userIgnoreGlobals
     end
+    displayMessage(string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_UPDATE_IGNORE_LIST), #defaultIgnoreGlobals, userCount), 0, 1, 0)
 end
 
 -- Rebuild the function lookup table by combining default and user-defined lists
@@ -1060,14 +503,11 @@ function rebuildIgnoreFunctionLookup()
         end
     end
 
-    -- Log the result if window is available
-    if msgwin then
-        local userCount = 0
-        if SavedVars and SavedVars.userIgnoreFunctions then
-            userCount = #SavedVars.userIgnoreFunctions
-        end
-        msgwin:AddText(string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_UPDATE_FUNC_LIST), #defaultIgnoreFunctions, userCount), 0, 1, 0)
+    local userCount = 0
+    if SavedVars and SavedVars.userIgnoreFunctions then
+        userCount = #SavedVars.userIgnoreFunctions
     end
+    displayMessage(string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_UPDATE_FUNC_LIST), #defaultIgnoreFunctions, userCount), 0, 1, 0)
 end
 
 -- Add a global to the ignore list
@@ -1135,56 +575,60 @@ function removeGlobalFromIgnoreList(globalName)
     return true, string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_REMOVED), globalName)
 end
 
+local function showViewerDetailText(text)
+    if not viewer then
+        return
+    end
+    viewer:Show()
+    viewer:SetDetailText(text)
+end
+
 -- List ignored globals
 function listIgnoredGlobals()
-    if msgwin then
-        msgwin:SetHidden(false)
-        msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_DEFAULT_GLOBALS), 1, 0.8, 0)
-        msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_DEFAULT_GLOBALS_DESC), 1, 0.8, 0)
-
-        table_sort(defaultIgnoreGlobals)
-        for _, name in ipairs(defaultIgnoreGlobals) do
-            msgwin:AddText(name, 0.7, 0.7, 0.7)
-        end
-
-        msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_USER_GLOBALS), 0, 0.8, 1)
-        msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_USER_GLOBALS_DESC), 0, 0.8, 1)
-
-        if not SavedVars or not SavedVars.userIgnoreGlobals or #SavedVars.userIgnoreGlobals == 0 then
-            msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_NO_USER_GLOBALS), 0.7, 0.7, 0.7)
-        else
-            table_sort(SavedVars.userIgnoreGlobals)
-            for _, name in ipairs(SavedVars.userIgnoreGlobals) do
-                msgwin:AddText(name, 0.7, 0.7, 0.7)
-            end
+    local lines =
+    {
+        GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_DEFAULT_GLOBALS),
+        GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_DEFAULT_GLOBALS_DESC),
+    }
+    table_sort(defaultIgnoreGlobals)
+    for _, name in ipairs(defaultIgnoreGlobals) do
+        table_insert(lines, name)
+    end
+    table_insert(lines, GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_USER_GLOBALS))
+    table_insert(lines, GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_USER_GLOBALS_DESC))
+    if not SavedVars or not SavedVars.userIgnoreGlobals or #SavedVars.userIgnoreGlobals == 0 then
+        table_insert(lines, GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_NO_USER_GLOBALS))
+    else
+        table_sort(SavedVars.userIgnoreGlobals)
+        for _, name in ipairs(SavedVars.userIgnoreGlobals) do
+            table_insert(lines, name)
         end
     end
+    showViewerDetailText(table_concat(lines, "\n"))
 end
 
 -- List ignored function patterns
 function listIgnoredFunctions()
-    if msgwin then
-        msgwin:SetHidden(false)
-        msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_DEFAULT_FUNCS), 1, 0.8, 0)
-        msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_DEFAULT_FUNCS_DESC), 1, 0.8, 0)
-
-        table_sort(defaultIgnoreFunctions)
-        for _, pattern in ipairs(defaultIgnoreFunctions) do
-            msgwin:AddText(pattern, 0.7, 0.7, 0.7)
-        end
-
-        msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_USER_FUNCS), 0, 0.8, 1)
-        msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_USER_FUNCS_DESC), 0, 0.8, 1)
-
-        if not SavedVars or not SavedVars.userIgnoreFunctions or #SavedVars.userIgnoreFunctions == 0 then
-            msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_NO_USER_FUNCS), 0.7, 0.7, 0.7)
-        else
-            table_sort(SavedVars.userIgnoreFunctions)
-            for _, pattern in ipairs(SavedVars.userIgnoreFunctions) do
-                msgwin:AddText(pattern, 0.7, 0.7, 0.7)
-            end
+    local lines =
+    {
+        GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_DEFAULT_FUNCS),
+        GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_DEFAULT_FUNCS_DESC),
+    }
+    table_sort(defaultIgnoreFunctions)
+    for _, pattern in ipairs(defaultIgnoreFunctions) do
+        table_insert(lines, pattern)
+    end
+    table_insert(lines, GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_USER_FUNCS))
+    table_insert(lines, GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_USER_FUNCS_DESC))
+    if not SavedVars or not SavedVars.userIgnoreFunctions or #SavedVars.userIgnoreFunctions == 0 then
+        table_insert(lines, GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_NO_USER_FUNCS))
+    else
+        table_sort(SavedVars.userIgnoreFunctions)
+        for _, pattern in ipairs(SavedVars.userIgnoreFunctions) do
+            table_insert(lines, pattern)
         end
     end
+    showViewerDetailText(table_concat(lines, "\n"))
 end
 
 -- Add a function pattern to the ignore list
@@ -1254,28 +698,23 @@ end
 
 -- Show help message
 function showHelp()
-    if msgwin then
-        msgwin:SetHidden(false)
-        msgwin:AddText(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_HELP_HEADER), 1, 1, 0)
-        msgwin:AddText("/undefs - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_TOGGLE), 1, 1, 1)
-        msgwin:AddText("/undefs_list - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_LIST), 1, 1, 1)
-        msgwin:AddText("/undefs_add <name> - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_ADD), 1, 1, 1)
-        msgwin:AddText("/undefs_remove <name> - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_REMOVE), 1, 1, 1)
-        msgwin:AddText("/undefs_listfunc - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_LISTFUNC), 1, 1, 1)
-        msgwin:AddText("/undefs_addfunc <pattern> - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_ADDFUNC), 1, 1, 1)
-        msgwin:AddText("/undefs_removefunc <pattern> - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_REMOVEFUNC), 1, 1, 1)
-        msgwin:AddText("/undefs_help - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_HELP), 1, 1, 1)
-    end
+    local text = table_concat(
+        {
+            GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_HELP_HEADER),
+            "/undefs - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_TOGGLE),
+            "/undefs_list - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_LIST),
+            "/undefs_add <name> - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_ADD),
+            "/undefs_remove <name> - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_REMOVE),
+            "/undefs_listfunc - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_LISTFUNC),
+            "/undefs_addfunc <pattern> - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_ADDFUNC),
+            "/undefs_removefunc <pattern> - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_REMOVEFUNC),
+            "/undefs_help - " .. GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_CMD_HELP),
+        }, "\n")
+    showViewerDetailText(text)
 end
 
--- Display a message both in window and in chat
+-- Display feedback in chat
 function displayMessage(message, r, g, b)
-    -- Add to our window if available
-    if msgwin then
-        msgwin:AddText(message, r, g, b)
-    end
-
-    -- Also add to chat for immediate feedback
     CHAT_ROUTER:AddSystemMessage(message)
 end
 
@@ -1315,27 +754,38 @@ function globalmiss(_, key)
     if zo_abs(math_frexp(reported[key]) - 0.5) > CONFIG.EPSILON then
         return
     end
-    if not msgwin then
+    if not viewer then
         return
     end
 
     local formatStr = type(key) == "string" and "%3dx %q" or "%3dx %s"
     local traceback = debugTraceback("|cFF0000Undefined global|r:" .. key, 2)
+    local topFrame = functionNames[1] or "?"
 
-    msgwin:AddText(formatMessage(formatStr, reported[key], key, traceback, functionNames))
+    local detailText = formatMessage(formatStr, reported[key], key, traceback, functionNames)
+    viewer:OnIncident(
+        {
+            key = key,
+            reportCount = reported[key],
+            topFrame = topFrame,
+            functionNames = functionNames,
+            detailText = detailText,
+            detailTextPlain = DacksUGC.StripColorMarkup(detailText),
+        })
 end
 
-EVENT_MANAGER:RegisterForEvent(myNAME, EVENT_ADD_ON_LOADED, function(eventCode, addOnName)
+EVENT_MANAGER:RegisterForEvent(myNAME, EVENT_ADD_ON_LOADED, function (eventCode, addOnName)
     if addOnName ~= myNAME then
         return
     end
     EVENT_MANAGER:UnregisterForEvent(myNAME, eventCode)
 
     -- Initialize saved variables
-    DacksUndefinedGlobalsCatcherSavedVars = DacksUndefinedGlobalsCatcherSavedVars or {
-        userIgnoreGlobals = {},
-        userIgnoreFunctions = {},
-    }
+    DacksUndefinedGlobalsCatcherSavedVars = DacksUndefinedGlobalsCatcherSavedVars or
+        {
+            userIgnoreGlobals = {},
+            userIgnoreFunctions = {},
+        }
     SavedVars = DacksUndefinedGlobalsCatcherSavedVars
 
     -- Ensure the userIgnoreFunctions field exists (for backwards compatibility)
@@ -1343,19 +793,44 @@ EVENT_MANAGER:RegisterForEvent(myNAME, EVENT_ADD_ON_LOADED, function(eventCode, 
         SavedVars.userIgnoreFunctions = {}
     end
 
-    -- Build the initial lookup tables
+    SavedVars.window = SavedVars.window or
+        {
+            x = 50,
+            y = 50,
+            width = CONFIG.WINDOW_WIDTH,
+            height = CONFIG.WINDOW_HEIGHT,
+            detailPaneHeight = 220,
+        }
+
+    DacksUGC.savedVars = SavedVars
+    viewer = DacksUGC.IncidentViewer:New()
+    DacksUGC.viewer = viewer
+    DacksUGC.GetUsableFont = getUsableFont
+    DacksUGC.displayMessage = displayMessage
+    DacksUGC.showHelp = showHelp
+    DacksUGC.addGlobalToIgnoreList = addGlobalToIgnoreList
+    DacksUGC.removeGlobalFromIgnoreList = removeGlobalFromIgnoreList
+    DacksUGC.addFunctionToIgnoreList = addFunctionToIgnoreList
+    DacksUGC.removeFunctionFromIgnoreList = removeFunctionFromIgnoreList
+
+    -- Build the initial lookup tables (chat-only status via displayMessage)
     rebuildIgnoreLookup()
     rebuildIgnoreFunctionLookup()
 
-    -- Create the message window
-    msgwin = MessageWindow:New("DacksUndefinedGlobalsCatcherWindow", GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_WINDOW_TITLE), CONFIG.WINDOW_WIDTH, CONFIG.WINDOW_HEIGHT)
+    -- -----------------------------------------------------------------------------
 
-    -- Register slash commands
-    SLASH_COMMANDS["/undefs"] = function()
-        msgwin:Toggle()
+    if not SLASH_COMMANDS["/rl"] then
+        SLASH_COMMANDS["/rl"] = function ()
+            ReloadUI("ingame")
+        end
     end
 
-    SLASH_COMMANDS["/undefs_add"] = function(args)
+    -- Register slash commands
+    SLASH_COMMANDS["/undefs"] = function ()
+        viewer:Toggle()
+    end
+
+    SLASH_COMMANDS["/undefs_add"] = function (args)
         local success, message = addGlobalToIgnoreList(args)
         if success then
             displayMessage(message, 0, 1, 0) -- Green for success
@@ -1364,7 +839,7 @@ EVENT_MANAGER:RegisterForEvent(myNAME, EVENT_ADD_ON_LOADED, function(eventCode, 
         end
     end
 
-    SLASH_COMMANDS["/undefs_remove"] = function(args)
+    SLASH_COMMANDS["/undefs_remove"] = function (args)
         local success, message = removeGlobalFromIgnoreList(args)
         if success then
             displayMessage(message, 0, 1, 0) -- Green for success
@@ -1373,11 +848,11 @@ EVENT_MANAGER:RegisterForEvent(myNAME, EVENT_ADD_ON_LOADED, function(eventCode, 
         end
     end
 
-    SLASH_COMMANDS["/undefs_list"] = function()
+    SLASH_COMMANDS["/undefs_list"] = function ()
         listIgnoredGlobals()
     end
 
-    SLASH_COMMANDS["/undefs_addfunc"] = function(args)
+    SLASH_COMMANDS["/undefs_addfunc"] = function (args)
         local success, message = addFunctionToIgnoreList(args)
         if success then
             displayMessage(message, 0, 1, 0) -- Green for success
@@ -1386,7 +861,7 @@ EVENT_MANAGER:RegisterForEvent(myNAME, EVENT_ADD_ON_LOADED, function(eventCode, 
         end
     end
 
-    SLASH_COMMANDS["/undefs_removefunc"] = function(args)
+    SLASH_COMMANDS["/undefs_removefunc"] = function (args)
         local success, message = removeFunctionFromIgnoreList(args)
         if success then
             displayMessage(message, 0, 1, 0) -- Green for success
@@ -1395,11 +870,11 @@ EVENT_MANAGER:RegisterForEvent(myNAME, EVENT_ADD_ON_LOADED, function(eventCode, 
         end
     end
 
-    SLASH_COMMANDS["/undefs_listfunc"] = function()
+    SLASH_COMMANDS["/undefs_listfunc"] = function ()
         listIgnoredFunctions()
     end
 
-    SLASH_COMMANDS["/undefs_help"] = function()
+    SLASH_COMMANDS["/undefs_help"] = function ()
         showHelp()
     end
 

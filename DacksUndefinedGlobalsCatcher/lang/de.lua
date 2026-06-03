@@ -11,6 +11,19 @@ local strings = {
     -- Button
     DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_ADD = "Hinzufügen",
     DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_REMOVE = "Entfernen",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_IGNORE_GLOBAL = "Global ignorieren",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_IGNORE_FUNCTION = "Top-Funktion ignorieren",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_SEARCH = "Suche:",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_SEARCH_TT = "Vorfälle nach globalem Namen oder Stack-Frame filtern.",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_SEARCH_PLACEHOLDER = "global oder frame...",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_CLEAR_TT = "Alle Vorfälle aus der Liste entfernen",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_RESET_TT = "Suchfilter zurücksetzen",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_CLOSE_TT = "Fenster schließen",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_EMPTY = "Nichts anzuzeigen",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_CLEAR_DIALOG_TITLE = "Vorfälle löschen",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_CLEAR_DIALOG_TEXT = "Alle Vorfälle aus der Liste entfernen? Zähler werden nicht zurückgesetzt.",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_COUNT_TT = "Gemeldet bei Lookup-Anzahl: <<1>>",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT = "Global: <<1>> (Typ: <<2>>)",
 
     -- Message
     DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_INPUT = "Bitte geben Sie zuerst einen Namen oder ein Muster ein.",

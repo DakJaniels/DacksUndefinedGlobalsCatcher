@@ -11,6 +11,19 @@ local strings = {
     -- Button
     DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_ADD = "Ajouter",
     DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_REMOVE = "Supprimer",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_IGNORE_GLOBAL = "Ignorer le global",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_IGNORE_FUNCTION = "Ignorer la fonction du haut",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_SEARCH = "Recherche :",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_SEARCH_TT = "Filtrer par nom global ou cadre de pile.",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_SEARCH_PLACEHOLDER = "global ou cadre...",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_CLEAR_TT = "Effacer tous les incidents",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_RESET_TT = "Réinitialiser le filtre",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_CLOSE_TT = "Fermer la fenêtre",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_EMPTY = "Rien à afficher",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_CLEAR_DIALOG_TITLE = "Effacer les incidents",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_CLEAR_DIALOG_TEXT = "Supprimer tous les incidents de la liste ? Les compteurs ne sont pas réinitialisés.",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_COUNT_TT = "Signalé au comptage : <<1>>",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT = "Global : <<1>> (type : <<2>>)",
 
     -- Message
     DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_INPUT = "Veuillez d'abord saisir un nom ou un modèle.",

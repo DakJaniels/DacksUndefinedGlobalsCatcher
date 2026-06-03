@@ -11,6 +11,19 @@ local strings = {
     -- Button
     DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_ADD = "Добавить",
     DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_REMOVE = "Удалить",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_IGNORE_GLOBAL = "Игнорировать global",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_BTN_IGNORE_FUNCTION = "Игнорировать верхнюю функцию",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_SEARCH = "Поиск:",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_SEARCH_TT = "Фильтр по имени global или кадру стека.",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_SEARCH_PLACEHOLDER = "global или кадр...",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_CLEAR_TT = "Очистить все инциденты",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_RESET_TT = "Сбросить фильтр",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_TOOLBAR_CLOSE_TT = "Закрыть окно",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_EMPTY = "Нечего показывать",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_CLEAR_DIALOG_TITLE = "Очистить инциденты",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_CLEAR_DIALOG_TEXT = "Удалить все инциденты из списка? Счётчики не сбрасываются.",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_COUNT_TT = "Сообщено при счётчике: <<1>>",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT = "Global: <<1>> (тип: <<2>>)",
 
     -- Message
     DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_INPUT = "Пожалуйста, сначала введите имя или шаблон.",
