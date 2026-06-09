@@ -1,4 +1,3 @@
---- Main incident list window (DebugLogViewer-style).
 DacksUGC = DacksUGC or {}
 
 local IncidentViewer = ZO_Object:Subclass()
@@ -17,6 +16,20 @@ local PANE_SIDE_INSET = 10
 local PANE_LIST_GAP = 8
 local PANE_SPLITTER_HEIGHT = 8
 
+local LIST_ROW_LEFT_INSET = 8
+local LIST_COL_TIME_WIDTH = 72
+local LIST_COL_COUNT_WIDTH = 48
+local LIST_COL_GAP = 6
+local LIST_COL_GLOBAL_FRAME_GAP = 10
+local LIST_COL_STACK_WIDTH = 30
+local LIST_COL_STACK_RIGHT_INSET = 4
+local LIST_COL_SPLITTER_WIDTH = 6
+local LIST_COL_FIXED_LEFT_WIDTH = LIST_ROW_LEFT_INSET + LIST_COL_TIME_WIDTH + LIST_COL_GAP + LIST_COL_COUNT_WIDTH + LIST_COL_GAP
+local LIST_COL_FIXED_RIGHT_WIDTH = LIST_COL_STACK_WIDTH + LIST_COL_STACK_RIGHT_INSET + LIST_COL_GLOBAL_FRAME_GAP
+local DEFAULT_GLOBAL_COLUMN_WIDTH = 340
+local MIN_GLOBAL_COLUMN_WIDTH = 100
+local MIN_FRAME_COLUMN_WIDTH = 80
+
 local MESSAGE_WINDOW_SCENE_NAMES = { "hud", "hudui", "gameMenuInGame", "siegeBar", "siegeBarUI" }
 
 local string_format = string.format
@@ -26,11 +39,103 @@ local table_insert = table.insert
 local table_remove = table.remove
 local zo_strformat = zo_strformat
 
+local GLOBAL_VALUE_PREVIEW_MAX = 72
+local GLOBAL_UNDEFINED_COLOR = ZO_ColorDef:New(1, 0.45, 0.45)
+
 local function formatGlobalKey(key)
     if type(key) == "string" then
         return string_format("%q", key)
     end
     return tostring(key)
+end
+
+local function truncatePreview(text, maxLen)
+    if #text <= maxLen then
+        return text
+    end
+    return text:sub(1, maxLen) .. "..."
+end
+
+local function formatValuePreview(value)
+    local valueType = type(value)
+    if valueType == "string" then
+        return string_format("%q", truncatePreview(value, GLOBAL_VALUE_PREVIEW_MAX))
+    elseif valueType == "number" or valueType == "boolean" then
+        return tostring(value)
+    end
+    return nil
+end
+
+--- @return boolean isUndefined
+--- @return string statusLine
+--- @return string|nil previewLine
+local function describeGlobalLookup(key)
+    if type(key) ~= "string" then
+        return false, zo_strformat(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_KEY_TYPE), type(key)), nil
+    end
+    local value = rawget(_G, key)
+    if value == nil then
+        return true, GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_UNDEFINED), nil
+    end
+    local valueType = type(value)
+    local statusLine = zo_strformat(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_DEFINED), valueType)
+    local preview = formatValuePreview(value)
+    if preview then
+        preview = zo_strformat(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_VALUE), preview)
+    end
+    return false, statusLine, preview
+end
+
+local function addGlobalTooltipLine(text, r, g, b)
+    InformationTooltip:AddLine(text, "", r, g, b, TOPLEFT, MODIFY_TEXT_TYPE_NONE, TEXT_ALIGN_LEFT)
+end
+
+local function hideGlobalIncidentTooltip()
+    ClearTooltip(InformationTooltip)
+end
+
+local function showGlobalIncidentTooltip(control)
+    local data = control.ugcIncidentData
+    if not data then
+        return
+    end
+    InitializeTooltip(InformationTooltip, control, BOTTOM, 0, -3)
+    local Theme = DacksUGC.Theme
+    local accR, accG, accB = Theme.accent:UnpackRGB()
+    local secR, secG, secB = Theme.textSecondary:UnpackRGB()
+    local priR, priG, priB = Theme.textPrimary:UnpackRGB()
+
+    local title = zo_strformat(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_TITLE), formatGlobalKey(data.key))
+    addGlobalTooltipLine(title, accR, accG, accB)
+
+    local isUndefined, statusLine, previewLine = describeGlobalLookup(data.key)
+    if isUndefined then
+        local ur, ug, ub = GLOBAL_UNDEFINED_COLOR:UnpackRGB()
+        addGlobalTooltipLine(statusLine, ur, ug, ub)
+    else
+        addGlobalTooltipLine(statusLine, secR, secG, secB)
+    end
+    if previewLine then
+        addGlobalTooltipLine(previewLine, secR, secG, secB)
+    end
+
+    ZO_Tooltip_AddDivider(InformationTooltip)
+
+    local frame = data.topFrame
+    if frame and frame ~= "" and frame ~= "?" then
+        addGlobalTooltipLine(zo_strformat(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_FRAME), frame), secR, secG, secB)
+    end
+    addGlobalTooltipLine(zo_strformat(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_COUNT_TT), data.reportCount or 0), priR, priG, priB)
+end
+
+local function hookGlobalLabelTooltip(globalControl)
+    if globalControl.ugcGlobalTooltipHooked then
+        return
+    end
+    globalControl.ugcGlobalTooltipHooked = true
+    globalControl.tooltipText = ""
+    globalControl:SetHandler("OnMouseEnter", showGlobalIncidentTooltip)
+    globalControl:SetHandler("OnMouseExit", hideGlobalIncidentTooltip)
 end
 
 local function getSearchBoxFilterText(editControl)
@@ -70,11 +175,13 @@ function IncidentViewer:Initialize()
 
     local sv = DacksUGC.savedVars
     self.detailPaneHeight = (sv and sv.window and sv.window.detailPaneHeight) or DEFAULT_DETAIL_PANE_HEIGHT
+    self.globalColumnWidth = (sv and sv.window and sv.window.globalColumnWidth) or DEFAULT_GLOBAL_COLUMN_WIDTH
     self.paneSplitter = self.window:GetNamedChild("PaneSplitter")
 
     self:ApplyWindowTheme()
     self:InitializeToolbar()
     self:InitializeList()
+    self:InitializeListColumnSplitter()
     self:InitializePaneSplitter()
     self:InitializeWindowHandlers()
     self:ApplySavedGeometry()
@@ -124,6 +231,205 @@ function IncidentViewer:SaveGeometry()
     sv.window.y = y
     sv.window.width, sv.window.height = self.window:GetDimensions()
     sv.window.detailPaneHeight = self.detailPaneHeight
+    sv.window.globalColumnWidth = self.globalColumnWidth
+end
+
+function IncidentViewer:GetListColumnLayoutWidth()
+    local list = self.sortFilterList and self.sortFilterList.list
+    if not list then
+        return 0
+    end
+    return list:GetWidth()
+end
+
+function IncidentViewer:ClampGlobalColumnWidth(width, listWidth)
+    listWidth = listWidth or self:GetListColumnLayoutWidth()
+    if listWidth <= 0 then
+        return zo_clamp(width, MIN_GLOBAL_COLUMN_WIDTH, DEFAULT_GLOBAL_COLUMN_WIDTH)
+    end
+    local maxWidth = listWidth - LIST_COL_FIXED_LEFT_WIDTH - LIST_COL_FIXED_RIGHT_WIDTH - MIN_FRAME_COLUMN_WIDTH
+    maxWidth = zo_max(maxWidth, MIN_GLOBAL_COLUMN_WIDTH)
+    return zo_clamp(width, MIN_GLOBAL_COLUMN_WIDTH, maxWidth)
+end
+
+function IncidentViewer:GetGlobalColumnSplitterOffsetX()
+    return LIST_COL_FIXED_LEFT_WIDTH + self.globalColumnWidth
+end
+
+function IncidentViewer:ApplyIncidentRowColumnLayout(rowControl)
+    if not rowControl then
+        return
+    end
+    local countControl = rowControl:GetNamedChild("Count")
+    local globalControl = rowControl:GetNamedChild("Global")
+    local frameControl = rowControl:GetNamedChild("Frame")
+    local stackControl = rowControl:GetNamedChild("Stack")
+    local globalWidth = self.globalColumnWidth
+
+    globalControl:ClearAnchors()
+    globalControl:SetAnchor(LEFT, countControl, RIGHT, LIST_COL_GAP, 0)
+    globalControl:SetDimensions(globalWidth, INCIDENT_ROW_HEIGHT)
+
+    stackControl:ClearAnchors()
+    stackControl:SetAnchor(RIGHT, rowControl, RIGHT, -LIST_COL_STACK_RIGHT_INSET, -3)
+
+    frameControl:ClearAnchors()
+    frameControl:SetAnchor(LEFT, globalControl, RIGHT, LIST_COL_GLOBAL_FRAME_GAP, 0)
+    frameControl:SetAnchor(RIGHT, stackControl, LEFT, -LIST_COL_GLOBAL_FRAME_GAP, 0)
+    frameControl:SetHeight(INCIDENT_ROW_HEIGHT)
+end
+
+local function prepareEllipsisLabel(label)
+    if label and not label.ugcEllipsisPrepared then
+        label.ugcEllipsisPrepared = true
+        label:SetWrapMode(TEXT_WRAP_MODE_ELLIPSIS)
+    end
+end
+
+function IncidentViewer:ApplyListColumnLayout()
+    local list = self.sortFilterList and self.sortFilterList.list
+    if not list then
+        return
+    end
+    local listWidth = list:GetWidth()
+    self.globalColumnWidth = self:ClampGlobalColumnWidth(self.globalColumnWidth, listWidth)
+
+    local splitter = self.listColumnSplitter
+    if splitter then
+        local offsetX = self:GetGlobalColumnSplitterOffsetX()
+        splitter:ClearAnchors()
+        splitter:SetAnchor(TOPLEFT, list, TOPLEFT, offsetX - LIST_COL_SPLITTER_WIDTH * 0.5, 0)
+        splitter:SetAnchor(BOTTOMLEFT, list, BOTTOMLEFT, offsetX - LIST_COL_SPLITTER_WIDTH * 0.5, 0)
+        splitter:SetWidth(LIST_COL_SPLITTER_WIDTH)
+    end
+
+    ZO_ScrollList_RefreshVisible(list)
+end
+
+function IncidentViewer:InstallDragOnUpdateHandler()
+    self.window:SetHandler("OnUpdate", function()
+        if self.listColSplitterDragActive then
+            self:OnListColumnSplitterDragUpdate()
+        elseif self.splitterDragActive then
+            self:OnPaneSplitterDragUpdate()
+        end
+    end)
+end
+
+function IncidentViewer:StopListColumnSplitterDrag()
+    if not self.listColSplitterDragActive then
+        return
+    end
+    self.listColSplitterDragActive = false
+    if not self.splitterDragActive then
+        self.window:SetHandler("OnUpdate", nil)
+    end
+    if self.listColSplitterDragShield then
+        self.listColSplitterDragShield:SetHidden(true)
+    end
+    if self.listColSplitterRootDragShield then
+        self.listColSplitterRootDragShield:SetHidden(true)
+    end
+    WINDOW_MANAGER:SetMouseCursor(MOUSE_CURSOR_DO_NOT_CARE)
+    self:SaveGeometry()
+end
+
+function IncidentViewer:OnListColumnSplitterDragUpdate()
+    if not self.listColSplitterDragActive then
+        return
+    end
+    local list = self.sortFilterList.list
+    local listLeft = select(1, list:GetScreenRect())
+    local scale = list:GetScale()
+    if scale == 0 then
+        scale = 1
+    end
+    local mouseX = select(1, GetUIMousePosition())
+    local relativeX = (mouseX - listLeft) / scale
+    self.globalColumnWidth = self:ClampGlobalColumnWidth(relativeX - LIST_COL_FIXED_LEFT_WIDTH)
+    self:ApplyListColumnLayout()
+end
+
+function IncidentViewer:InitializeListColumnSplitter()
+    local viewer = self
+    local list = self.sortFilterList and self.sortFilterList.list
+    local window = self.window
+    if not list or not window then
+        return
+    end
+
+    local splitter = WINDOW_MANAGER:CreateControl("$(parent)ListColumnSplitter", list, CT_CONTROL)
+    splitter:SetMouseEnabled(true)
+    splitter:SetDrawTier(DT_HIGH)
+    splitter.tooltipText = GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_LIST_COL_SPLITTER_TT)
+    viewer.listColumnSplitter = splitter
+
+    local grip = WINDOW_MANAGER:CreateControl("$(parent)Grip", splitter, CT_TEXTURE)
+    grip:SetColor(1, 1, 1, 0.35)
+    grip:SetAnchor(TOPLEFT)
+    grip:SetAnchor(BOTTOMRIGHT)
+    grip:SetWidth(1)
+
+    local dragShield = WINDOW_MANAGER:CreateControl("$(parent)ListColSplitterDragShield", window, CT_CONTROL)
+    dragShield:SetAnchor(TOPLEFT, window, TOPLEFT, 0, 0)
+    dragShield:SetAnchor(BOTTOMRIGHT, window, BOTTOMRIGHT, 0, 0)
+    dragShield:SetMouseEnabled(true)
+    dragShield:SetDrawTier(DT_HIGH)
+    dragShield:SetHidden(true)
+    viewer.listColSplitterDragShield = dragShield
+
+    local rootDragShield = WINDOW_MANAGER:CreateControl("DacksUGCListColSplitterDragShieldRoot", GuiRoot, CT_CONTROL)
+    rootDragShield:SetAnchor(TOPLEFT, GuiRoot, TOPLEFT, 0, 0)
+    rootDragShield:SetAnchor(BOTTOMRIGHT, GuiRoot, BOTTOMRIGHT, 0, 0)
+    rootDragShield:SetMouseEnabled(true)
+    rootDragShield:SetDrawTier(DT_MAX_VALUE)
+    rootDragShield:SetHidden(true)
+    viewer.listColSplitterRootDragShield = rootDragShield
+
+    local function tryStopDrag(_, button)
+        if button == MOUSE_BUTTON_INDEX_LEFT and viewer.listColSplitterDragActive then
+            viewer:StopListColumnSplitterDrag()
+        end
+    end
+
+    dragShield:SetHandler("OnMouseUp", tryStopDrag)
+    rootDragShield:SetHandler("OnMouseUp", tryStopDrag)
+    splitter:SetHandler("OnMouseUp", tryStopDrag)
+    window:SetHandler("OnMouseUp", tryStopDrag)
+
+    local function startDrag()
+        if viewer.splitterDragActive then
+            return
+        end
+        viewer.listColSplitterDragActive = true
+        WINDOW_MANAGER:SetMouseCursor(MOUSE_CURSOR_RESIZE_EW)
+        dragShield:SetHidden(false)
+        rootDragShield:SetHidden(false)
+        viewer:InstallDragOnUpdateHandler()
+    end
+
+    splitter:SetHandler("OnMouseDown", function(_, button)
+        if button == MOUSE_BUTTON_INDEX_LEFT then
+            startDrag()
+        end
+    end)
+    splitter:SetHandler("OnDragStart", function(_, button)
+        if button == MOUSE_BUTTON_INDEX_LEFT and not viewer.listColSplitterDragActive then
+            startDrag()
+        end
+    end)
+    splitter:SetHandler("OnMouseEnter", function()
+        if not viewer.listColSplitterDragActive then
+            WINDOW_MANAGER:SetMouseCursor(MOUSE_CURSOR_RESIZE_EW)
+        end
+    end)
+    splitter:SetHandler("OnMouseExit", function()
+        if not viewer.listColSplitterDragActive then
+            WINDOW_MANAGER:SetMouseCursor(MOUSE_CURSOR_DO_NOT_CARE)
+        end
+    end)
+
+    self:ApplyListColumnLayout()
 end
 
 function IncidentViewer:GetMaxDetailPaneHeight()
@@ -167,6 +473,7 @@ function IncidentViewer:ApplyPaneLayout()
     listBg:SetAnchor(BOTTOMRIGHT, splitter, TOPRIGHT, -PANE_SIDE_INSET, -PANE_LIST_GAP)
 
     ZO_ScrollList_UpdateScroll(list)
+    self:ApplyListColumnLayout()
 end
 
 function IncidentViewer:StopPaneSplitterDrag()
@@ -174,7 +481,9 @@ function IncidentViewer:StopPaneSplitterDrag()
         return
     end
     self.splitterDragActive = false
-    self.window:SetHandler("OnUpdate", nil)
+    if not self.listColSplitterDragActive then
+        self.window:SetHandler("OnUpdate", nil)
+    end
     if self.paneSplitterDragShield then
         self.paneSplitterDragShield:SetHidden(true)
     end
@@ -223,15 +532,16 @@ function IncidentViewer:InitializePaneSplitter()
     window:SetHandler("OnMouseUp", tryStopDrag)
 
     local function startDrag()
+        if viewer.listColSplitterDragActive then
+            return
+        end
         viewer.splitterDragActive = true
         viewer.splitterDragStartY = select(2, GetUIMousePosition())
         viewer.splitterDragStartHeight = viewer.detailPaneHeight
         WINDOW_MANAGER:SetMouseCursor(MOUSE_CURSOR_RESIZE_NS)
         dragShield:SetHidden(false)
         rootDragShield:SetHidden(false)
-        viewer.window:SetHandler("OnUpdate", function()
-            viewer:OnPaneSplitterDragUpdate()
-        end)
+        viewer:InstallDragOnUpdateHandler()
     end
 
     splitter:SetHandler("OnMouseDown", function(control, button)
@@ -300,6 +610,9 @@ function IncidentViewer:InitializeToolbar()
 end
 
 function IncidentViewer:ShouldShowIncident(data, filterLower)
+    if DacksUGC.shouldSkipIncident and DacksUGC.shouldSkipIncident(data.key, data.functionNames) then
+        return false
+    end
     if filterLower == "" then
         return true
     end
@@ -346,12 +659,17 @@ function IncidentViewer:InitializeList()
         local globalControl = control:GetNamedChild("Global")
         globalControl:SetText(formatGlobalKey(data.key))
         globalControl:SetColor(priR, priG, priB, priA)
-        globalControl.tooltipText = data.globalTooltip
+        globalControl.ugcIncidentData = data
+        hookGlobalLabelTooltip(globalControl)
+        prepareEllipsisLabel(globalControl)
 
         local frameControl = control:GetNamedChild("Frame")
         frameControl:SetText(data.topFrame or "?")
         frameControl:SetColor(secR, secG, secB, secA)
         frameControl.tooltipText = data.topFrame
+        prepareEllipsisLabel(frameControl)
+
+        viewer:ApplyIncidentRowColumnLayout(control)
 
         local stackControl = control:GetNamedChild("Stack")
         local names = data.functionNames
@@ -502,6 +820,28 @@ function IncidentViewer:ClearIncidents()
     self:RequestRefresh(SKIP_SCROLL_ANIMATION)
 end
 
+function IncidentViewer:RemoveIncidentsMatchingIgnoreRules()
+    if not DacksUGC.shouldSkipIncident then
+        return
+    end
+    local masterList = self.masterList
+    local removed = false
+    for i = #masterList, 1, -1 do
+        local data = ZO_ScrollList_GetDataEntryData(masterList[i])
+        if DacksUGC.shouldSkipIncident(data.key, data.functionNames) then
+            table_remove(masterList, i)
+            removed = true
+        end
+    end
+    if removed then
+        local current = self.detailPane:GetIncident()
+        if current and DacksUGC.shouldSkipIncident(current.key, current.functionNames) then
+            self.detailPane:Clear()
+        end
+        self:RequestRefresh(SKIP_SCROLL_ANIMATION)
+    end
+end
+
 function IncidentViewer:SelectIncident(data)
     if not data then
         return
@@ -512,13 +852,16 @@ function IncidentViewer:SelectIncident(data)
 end
 
 function IncidentViewer:OnIncident(incident)
+    if DacksUGC.shouldSkipIncident and DacksUGC.shouldSkipIncident(incident.key, incident.functionNames) then
+        return
+    end
+
     self.nextIncidentId = self.nextIncidentId + 1
     incident.id = self.nextIncidentId
 
     local formattedTime = GetTimeString()
     incident.formattedTime = formattedTime
     incident.timeShort = formattedTime:sub(1, 8)
-    incident.globalTooltip = zo_strformat(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT), formatGlobalKey(incident.key), type(incident.key))
 
     local dataEntry = ZO_ScrollList_CreateDataEntry(UGC_INCIDENT_DATA, incident)
     table_insert(self.masterList, dataEntry)
@@ -564,6 +907,7 @@ end
 
 function IncidentViewer:Show()
     self:RegisterClearDialog()
+    self:RemoveIncidentsMatchingIgnoreRules()
     self.window:SetHidden(false)
     self:AddFragmentToScenes()
     self.sortFilterList:RefreshFilters()

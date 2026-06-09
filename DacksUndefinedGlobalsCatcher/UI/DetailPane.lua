@@ -131,7 +131,7 @@ function DetailPane:UpdateDetailTextForCopyChord()
     end
 end
 
---- Plain text in the edit + SelectAll; user presses Ctrl+C (client copy, no private clipboard APIs).
+--- Plain text in the edit + SelectAll; user presses Ctrl+C.
 function DetailPane:CopyPlainDetailToClipboard()
     local edit = self.detailEdit
     local plain = self.detailTextPlain

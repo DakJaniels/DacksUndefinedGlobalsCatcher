@@ -37,25 +37,13 @@
         </Label>
         <Label name="$(parent)Global"
                font="ZoFontGame"
+               horizontalAlignment="LEFT"
                mouseEnabled="true">
           <Anchor point="LEFT"
                   relativePoint="RIGHT"
                   relativeTo="$(parent)Count"
                   offsetX="6" />
-          <Dimensions x="200"
-                      y="30" />
-          <OnMouseEnter>self:GetOwningWindow().OnMouseEnterRow(self)</OnMouseEnter>
-          <OnMouseExit>self:GetOwningWindow().OnMouseExitRow(self)</OnMouseExit>
-          <OnMouseUp>self:GetOwningWindow().OnMouseUpRow(self:GetParent(), button, upInside)</OnMouseUp>
-        </Label>
-        <Label name="$(parent)Frame"
-               font="ZoFontGameSmall"
-               mouseEnabled="true">
-          <Anchor point="LEFT"
-                  relativePoint="RIGHT"
-                  relativeTo="$(parent)Global"
-                  offsetX="6" />
-          <Dimensions x="280"
+          <Dimensions x="340"
                       y="30" />
           <OnMouseEnter>self:GetOwningWindow().OnMouseEnterRow(self)</OnMouseEnter>
           <OnMouseExit>self:GetOwningWindow().OnMouseExitRow(self)</OnMouseExit>
@@ -64,9 +52,8 @@
         <Texture name="$(parent)Stack"
                  textureFile="EsoUI/Art/Housing/Keyboard/furniture_tabIcon_recall_down.dds"
                  mouseEnabled="true">
-          <Anchor point="LEFT"
-                  relativePoint="RIGHT"
-                  relativeTo="$(parent)Frame"
+          <Anchor point="RIGHT"
+                  offsetX="-4"
                   offsetY="-3" />
           <Dimensions x="30"
                       y="30" />
@@ -74,6 +61,23 @@
           <OnMouseExit>self:GetOwningWindow().OnMouseExitRow(self)</OnMouseExit>
           <OnMouseUp>self:GetOwningWindow().OnMouseUpRow(self:GetParent(), button, upInside)</OnMouseUp>
         </Texture>
+        <Label name="$(parent)Frame"
+               font="ZoFontGameSmall"
+               horizontalAlignment="LEFT"
+               mouseEnabled="true">
+          <Anchor point="LEFT"
+                  relativePoint="RIGHT"
+                  relativeTo="$(parent)Global"
+                  offsetX="10" />
+          <Anchor point="RIGHT"
+                  relativeTo="$(parent)Stack"
+                  relativePoint="LEFT"
+                  offsetX="-10" />
+          <Dimensions y="30" />
+          <OnMouseEnter>self:GetOwningWindow().OnMouseEnterRow(self)</OnMouseEnter>
+          <OnMouseExit>self:GetOwningWindow().OnMouseExitRow(self)</OnMouseExit>
+          <OnMouseUp>self:GetOwningWindow().OnMouseUpRow(self:GetParent(), button, upInside)</OnMouseUp>
+        </Label>
       </Controls>
     </Control>
     <TopLevelControl name="DacksUGCMainWindow"

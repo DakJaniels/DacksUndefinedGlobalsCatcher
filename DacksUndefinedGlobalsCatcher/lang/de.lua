@@ -23,7 +23,12 @@ local strings = {
     DACKS_UNDEFINED_GLOBALS_CATCHER_CLEAR_DIALOG_TITLE = "Vorfälle löschen",
     DACKS_UNDEFINED_GLOBALS_CATCHER_CLEAR_DIALOG_TEXT = "Alle Vorfälle aus der Liste entfernen? Zähler werden nicht zurückgesetzt.",
     DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_COUNT_TT = "Gemeldet bei Lookup-Anzahl: <<1>>",
-    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT = "Global: <<1>> (Typ: <<2>>)",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_TITLE = "Global: <<1>>",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_UNDEFINED = "Status: undefiniert (nil in _G)",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_DEFINED = "Status: definiert (<<1>>)",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_VALUE = "Wert: <<1>>",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_KEY_TYPE = "Lookup-Schlüsseltyp: <<1>>",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_FRAME = "Oberster Frame: <<1>>",
 
     -- Message
     DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_INPUT = "Bitte geben Sie zuerst einen Namen oder ein Muster ein.",

@@ -23,7 +23,12 @@ local strings = {
     DACKS_UNDEFINED_GLOBALS_CATCHER_CLEAR_DIALOG_TITLE = "Borrar incidentes",
     DACKS_UNDEFINED_GLOBALS_CATCHER_CLEAR_DIALOG_TEXT = "¿Eliminar todos los incidentes de la lista? Los contadores no se reinician.",
     DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_COUNT_TT = "Reportado en el recuento: <<1>>",
-    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT = "Global: <<1>> (tipo: <<2>>)",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_TITLE = "Global: <<1>>",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_UNDEFINED = "Estado: indefinido (nil en _G)",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_DEFINED = "Estado: definido (<<1>>)",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_VALUE = "Valor: <<1>>",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_KEY_TYPE = "Tipo de clave de búsqueda: <<1>>",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_FRAME = "Frame superior: <<1>>",
 
     -- Message
     DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_INPUT = "Por favor, introduce primero un nombre o patrón.",

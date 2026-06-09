@@ -23,7 +23,12 @@ local strings = {
     DACKS_UNDEFINED_GLOBALS_CATCHER_CLEAR_DIALOG_TITLE = "Очистить инциденты",
     DACKS_UNDEFINED_GLOBALS_CATCHER_CLEAR_DIALOG_TEXT = "Удалить все инциденты из списка? Счётчики не сбрасываются.",
     DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_COUNT_TT = "Сообщено при счётчике: <<1>>",
-    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT = "Global: <<1>> (тип: <<2>>)",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_TITLE = "Global: <<1>>",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_UNDEFINED = "Статус: не определено (nil в _G)",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_DEFINED = "Статус: определено (<<1>>)",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_VALUE = "Значение: <<1>>",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_KEY_TYPE = "Тип ключа поиска: <<1>>",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_FRAME = "Верхний кадр: <<1>>",
 
     -- Message
     DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_INPUT = "Пожалуйста, сначала введите имя или шаблон.",

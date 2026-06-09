@@ -1,5 +1,3 @@
---- FlexUI-aligned theme tokens (no LibFlexUI dependency).
---- Values match LibFlexUI DefaultTheme.lua.
 DacksUGC = DacksUGC or {}
 
 local Theme = {}

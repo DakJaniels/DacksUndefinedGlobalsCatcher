@@ -485,6 +485,9 @@ function rebuildIgnoreLookup()
         userCount = #SavedVars.userIgnoreGlobals
     end
     displayMessage(string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_UPDATE_IGNORE_LIST), #defaultIgnoreGlobals, userCount), 0, 1, 0)
+    if viewer and viewer.RemoveIncidentsMatchingIgnoreRules then
+        viewer:RemoveIncidentsMatchingIgnoreRules()
+    end
 end
 
 -- Rebuild the function lookup table by combining default and user-defined lists
@@ -508,6 +511,9 @@ function rebuildIgnoreFunctionLookup()
         userCount = #SavedVars.userIgnoreFunctions
     end
     displayMessage(string_format(GetString(DACKS_UNDEFINED_GLOBALS_CATCHER_UPDATE_FUNC_LIST), #defaultIgnoreFunctions, userCount), 0, 1, 0)
+    if viewer and viewer.RemoveIncidentsMatchingIgnoreRules then
+        viewer:RemoveIncidentsMatchingIgnoreRules()
+    end
 end
 
 -- Add a global to the ignore list
@@ -724,6 +730,35 @@ function isControlCreation(functionNames)
         if ignoreFunctionLookup[funcName] then
             return true
         end
+        for pattern in pairs(ignoreFunctionLookup) do
+            if funcName:find(pattern, 1, true) then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+--- @param key any
+--- @param functionNames string[]|nil
+--- @return boolean
+function shouldSkipIncident(key, functionNames)
+    if isNilOrEmpty(key) then
+        return false
+    end
+    if shouldIgnoreGlobal(key) then
+        return true
+    end
+    local keyName = type(key) == "string" and key or tostring(key)
+    if ignoreLookup[keyName] then
+        return true
+    end
+    -- Global names listed under function ignores (e.g. via Functions mode) still suppress that global.
+    if ignoreFunctionLookup[keyName] then
+        return true
+    end
+    if functionNames and isControlCreation(functionNames) then
+        return true
     end
     return false
 end
@@ -739,12 +774,12 @@ end
 --- @param _ any
 --- @param key any
 function globalmiss(_, key)
-    if isNilOrEmpty(key) or reported[key] > CONFIG.MAX_REPORTS or shouldIgnoreGlobal(key) or ignoreLookup[key] then
+    if isNilOrEmpty(key) or reported[key] > CONFIG.MAX_REPORTS then
         return
     end
 
     local functionNames = ZO_GetCallstackFunctionNames(1)
-    if isControlCreation(functionNames) then
+    if shouldSkipIncident(key, functionNames) then
         return
     end
 
@@ -812,6 +847,7 @@ EVENT_MANAGER:RegisterForEvent(myNAME, EVENT_ADD_ON_LOADED, function (eventCode,
     DacksUGC.removeGlobalFromIgnoreList = removeGlobalFromIgnoreList
     DacksUGC.addFunctionToIgnoreList = addFunctionToIgnoreList
     DacksUGC.removeFunctionFromIgnoreList = removeFunctionFromIgnoreList
+    DacksUGC.shouldSkipIncident = shouldSkipIncident
 
     -- Build the initial lookup tables (chat-only status via displayMessage)
     rebuildIgnoreLookup()

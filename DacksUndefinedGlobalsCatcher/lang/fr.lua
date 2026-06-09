@@ -23,7 +23,12 @@ local strings = {
     DACKS_UNDEFINED_GLOBALS_CATCHER_CLEAR_DIALOG_TITLE = "Effacer les incidents",
     DACKS_UNDEFINED_GLOBALS_CATCHER_CLEAR_DIALOG_TEXT = "Supprimer tous les incidents de la liste ? Les compteurs ne sont pas réinitialisés.",
     DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_COUNT_TT = "Signalé au comptage : <<1>>",
-    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT = "Global : <<1>> (type : <<2>>)",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_TITLE = "Global : <<1>>",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_UNDEFINED = "Statut : non défini (nil dans _G)",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_DEFINED = "Statut : défini (<<1>>)",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_VALUE = "Valeur : <<1>>",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_KEY_TYPE = "Type de clé de recherche : <<1>>",
+    DACKS_UNDEFINED_GLOBALS_CATCHER_ROW_GLOBAL_TT_FRAME = "Frame principal : <<1>>",
 
     -- Message
     DACKS_UNDEFINED_GLOBALS_CATCHER_MSG_EMPTY_INPUT = "Veuillez d'abord saisir un nom ou un modèle.",
